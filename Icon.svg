@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1C2E50"/>
+      <stop offset="100%" stop-color="#0A1222"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#FFD166"/>
+      <stop offset="100%" stop-color="#F5A623"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded background -->
+  <rect width="512" height="512" rx="114" ry="114" fill="url(#bg)"/>
+
+  <!-- Lightning bolt — single clean shape, optically centered -->
+  <path d="M 295 72 L 168 278 L 245 278 L 202 440 L 352 234 L 272 234 Z"
+    fill="url(#bolt)"
+    stroke="url(#bolt)" stroke-width="4"
+    stroke-linejoin="round" stroke-linecap="round"/>
+</svg>
