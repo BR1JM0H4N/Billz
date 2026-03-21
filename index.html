@@ -596,7 +596,7 @@ function getV(){
   const prev=parseFloat(cfg.lastReading)||0,curr=parseFloat(E('new-inp').value)||0;
   const units=curr>prev?+((curr-prev).toFixed(1)):0;
   const rate=parseFloat(cfg.rate)||0,rent=parseFloat(cfg.rent)||0;
-  const elec=+(units*rate).toFixed(2),total=elec+rent;
+  const elec=+(units*rate).toFixed(2),total=Math.round(elec+rent);
   const valid=E('new-inp').value!==''&&curr>prev;
   return{prev,curr,units,rate,rent,elec,total,valid};
 }
