@@ -1,0 +1,64 @@
+{
+  "name": "Billz — Meter Billing",
+  "short_name": "Billz",
+  "description": "Generate, photo-proof, and share electricity + rent bills as WhatsApp-ready images.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#05080F",
+  "theme_color": "#05080F",
+  "lang": "en",
+  "categories": ["utilities", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Billz reading screen"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Reading",
+      "short_name": "Reading",
+      "description": "Enter a new meter reading",
+      "url": "./?tab=reading",
+      "icons": [{ "src": "icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "History",
+      "short_name": "History",
+      "description": "View past bills",
+      "url": "./?tab=history",
+      "icons": [{ "src": "icon.svg", "sizes": "any" }]
+    }
+  ]
+}
