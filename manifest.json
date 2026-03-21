@@ -1,1 +1,50 @@
-
+{
+  "id": "/Billz/",
+  "name": "Billz - Meter Billing",
+  "short_name": "Billz",
+  "description": "Beautiful offline-first meter billing app for landlords.",
+  "lang": "en-US",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#05080F",
+  "theme_color": "#05080F",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "utilities", "finance"],
+  "icons": [
+    {
+      "src": "./Icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./Icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Reading",
+      "short_name": "Reading",
+      "description": "Open and enter the latest meter reading",
+      "url": "./index.html#reading"
+    },
+    {
+      "name": "Bill History",
+      "short_name": "History",
+      "description": "Open previously saved bills",
+      "url": "./index.html#history"
+    },
+    {
+      "name": "Settings",
+      "short_name": "Settings",
+      "description": "Edit property, rate and rent",
+      "url": "./index.html#settings"
+    }
+  ]
+}
