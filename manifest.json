@@ -2,7 +2,7 @@
   "name": "Billz — Meter Billing",
   "short_name": "Billz",
   "description": "Generate, photo-proof, and share electricity + rent bills as WhatsApp-ready images.",
-  "start_url": "./",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
@@ -34,22 +34,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "New Reading",
-      "short_name": "Reading",
-      "description": "Enter a new meter reading",
-      "url": "./?tab=reading",
-      "icons": [{ "src": "icon.svg", "sizes": "any" }]
-    },
-    {
-      "name": "History",
-      "short_name": "History",
-      "description": "View past bills",
-      "url": "./?tab=history",
-      "icons": [{ "src": "icon.svg", "sizes": "any" }]
     }
   ]
 }
