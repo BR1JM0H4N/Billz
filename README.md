@@ -116,11 +116,28 @@ From next month onward, just open the app and type the new reading. Everything e
 ```
 Billz/
 ├── index.html     # The entire app — HTML, CSS, and JS in one file
-├── icon.svg       # App icon
+├── Icon.svg       # App icon
+├── manifest.json  # PWA web app manifest
+├── sw.js          # Service worker (offline + cache updates)
+├── pwa-register.js # Optional SW registration helper
 └── README.md      # This file
 ```
 
 No frameworks. No build tools. No `node_modules`. Fully self-contained.
+
+---
+
+## 📲 PWA Enablement (No `index.html` edits)
+
+This repo includes a production-ready `manifest.json` and `sw.js`.
+
+Because Billz intentionally keeps all UI/logic in one self-contained `index.html`, service worker registration is provided in `pwa-register.js` so hosts can wire it in **without touching app code**:
+
+- **Nginx / Apache / Caddy**: inject `<script src="/pwa-register.js" defer></script>` at edge/proxy layer.
+- **Hosting with HTML response transforms** (e.g., Cloudflare): inject the same script.
+- Ensure `manifest.json` is discoverable (via `<link rel="manifest">` or HTTP `Link` header on HTML response).
+
+Once wired, Billz behaves as an offline-first installable PWA and auto-updates cached assets.
 
 ---
 
