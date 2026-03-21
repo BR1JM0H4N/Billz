@@ -41,6 +41,33 @@ select option{background:var(--card)}
 .hdr-prop{font-size:17px;font-weight:800}
 .month-badge{background:var(--amber-glow);border:1px solid var(--amber-dim);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--amber);font-weight:700}
 
+/* Billing month chip on reading screen */
+.month-chip{display:inline-flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 13px;margin-bottom:18px;cursor:pointer;transition:border-color .2s;user-select:none}
+.month-chip:hover{border-color:var(--amber-dim)}
+.month-chip-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:2px}
+.month-chip-val{font-size:14px;font-weight:700;color:var(--amber)}
+.month-chip-edit{font-size:10px;color:var(--muted2);margin-left:2px}
+.month-chip-auto{font-size:9px;color:var(--success);background:rgba(34,211,165,0.1);border-radius:4px;padding:2px 6px;font-weight:600;letter-spacing:0.5px}
+.month-chip-manual{font-size:9px;color:var(--amber);background:rgba(245,166,35,0.1);border-radius:4px;padding:2px 6px;font-weight:600;letter-spacing:0.5px}
+
+/* Month picker sheet */
+#month-sheet{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:210;align-items:flex-end;justify-content:center}
+#month-sheet.open{display:flex}
+#month-sheet-box{background:var(--card);border:1px solid var(--border);border-top:2px solid var(--amber-dim);border-radius:20px 20px 0 0;padding:20px 18px max(24px,env(safe-area-inset-bottom));width:100%;max-width:480px;animation:slideUp .3s ease}
+.ms-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
+.ms-sub{font-size:11px;color:var(--muted);margin-bottom:16px}
+.ms-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.ms-month-btn{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:12px 6px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;text-align:center;transition:all .15s;font-family:var(--sans)}
+.ms-month-btn:hover{border-color:var(--amber-dim);color:var(--amber)}
+.ms-month-btn.active{background:var(--amber-glow);border-color:var(--amber);color:var(--amber)}
+.ms-month-btn.suggested{border-color:rgba(34,211,165,0.4);color:var(--success)}
+.ms-year-row{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px}
+.ms-year-btn{background:none;border:1px solid var(--border);border-radius:8px;width:36px;height:36px;color:var(--text);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;font-family:var(--sans);transition:border-color .15s}
+.ms-year-btn:hover{border-color:var(--amber-dim);color:var(--amber)}
+.ms-year-val{font-size:16px;font-weight:700;min-width:60px;text-align:center}
+.ms-reset{width:100%;background:none;border:1px solid var(--border2);border-radius:10px;padding:11px;font-size:12px;color:var(--muted);cursor:pointer;font-family:var(--sans);margin-bottom:8px;transition:all .15s}
+.ms-reset:hover{border-color:var(--success);color:var(--success)}
+
 /* Nav */
 #nav{position:absolute;bottom:0;left:0;right:0;background:rgba(5,8,15,0.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border2);display:flex;padding:10px 0 max(18px,env(safe-area-inset-bottom));z-index:100}
 .nav-btn{flex:1;background:none;border:none;cursor:pointer;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 0;transition:color .2s}
@@ -290,6 +317,16 @@ select.field-inp{cursor:pointer}
       </div>
       <span style="font-size:30px">📟</span>
     </div>
+
+    <!-- Billing month chip — tap to change -->
+    <div class="month-chip" onclick="openMonthSheet()">
+      <div>
+        <div class="month-chip-label">Billing Month</div>
+        <div class="month-chip-val" id="chip-month-val">—</div>
+      </div>
+      <span id="chip-auto-tag" class="month-chip-auto">AUTO</span>
+      <span class="month-chip-edit">✎</span>
+    </div>
     <div style="margin-bottom:18px">
       <div class="sec-lbl">↳ New Meter Reading</div>
       <div class="inp-wrap">
@@ -510,6 +547,22 @@ select.field-inp{cursor:pointer}
   </div>
 </div>
 
+<!-- Month picker sheet -->
+<div id="month-sheet" onclick="closeMonthSheet(event)">
+  <div id="month-sheet-box">
+    <div class="ms-title">Billing Month</div>
+    <div class="ms-sub" id="ms-sub">Tap a month to override. Green = auto-suggested.</div>
+    <div class="ms-year-row">
+      <button class="ms-year-btn" onclick="shiftYear(-1)">‹</button>
+      <div class="ms-year-val" id="ms-year-val">2025</div>
+      <button class="ms-year-btn" onclick="shiftYear(1)">›</button>
+    </div>
+    <div class="ms-grid" id="ms-month-grid"></div>
+    <button class="ms-reset" onclick="resetToAuto()">↺ Reset to automatic</button>
+    <button class="btn btn-primary" onclick="closeMonthSheet()">Done</button>
+  </div>
+</div>
+
 <!-- PWA Install Banner -->
 <div id="install-banner" class="hide">
   <div class="ib-icon"><img src="icon.svg" alt="Billz"/></div>
@@ -544,7 +597,98 @@ const fmtN=n=>new Intl.NumberFormat('en-IN',{minimumFractionDigits:2,maximumFrac
 const fmtINR=n=>'₹'+fmtN(n);
 const E=id=>document.getElementById(id);
 const tog=(id,hide)=>E(id).classList.toggle('hide',hide);
-function displayMonth(){const M=['January','February','March','April','May','June','July','August','September','October','November','December'];if(cfg.billingMonth&&cfg.billingYear)return cfg.billingMonth+' '+cfg.billingYear;const n=new Date();return M[n.getMonth()]+' '+n.getFullYear()}
+// ── Smart billing month ────────────────────────────────────────
+// If day ≤ 12  →  last month (you're paying for last month)
+// If day > 12  →  current month (late / advance payment)
+// cfg.billingMonth / cfg.billingYear = manual override when set
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function autoMonth(){
+  const n=new Date(), day=n.getDate(), m=n.getMonth(), y=n.getFullYear();
+  if(day<=12){
+    // Previous month
+    return m===0 ? {month:MONTHS[11],year:y-1} : {month:MONTHS[m-1],year:y};
+  }
+  return {month:MONTHS[m],year:y};
+}
+
+function displayMonth(){
+  // Manual override takes priority
+  if(cfg.billingMonth&&cfg.billingYear) return cfg.billingMonth+' '+cfg.billingYear;
+  const a=autoMonth(); return a.month+' '+a.year;
+}
+
+function isManualMonth(){ return !!(cfg.billingMonth&&cfg.billingYear); }
+
+function updateMonthChip(){
+  const label=displayMonth();
+  E('chip-month-val').textContent=label;
+  E('hdr-month').textContent=label;
+  const tag=E('chip-auto-tag');
+  if(isManualMonth()){tag.textContent='MANUAL';tag.className='month-chip-manual'}
+  else{tag.textContent='AUTO';tag.className='month-chip-auto'}
+}
+
+// ── Month sheet state ──────────────────────────────────────────
+let _sheetYear = new Date().getFullYear();
+let _sheetMonth = null; // index 0-11, null = follow auto
+
+function openMonthSheet(){
+  const auto=autoMonth();
+  // Init sheet to current selection
+  if(isManualMonth()){
+    _sheetMonth=MONTHS.indexOf(cfg.billingMonth);
+    _sheetYear=parseInt(cfg.billingYear);
+  } else {
+    _sheetMonth=MONTHS.indexOf(auto.month);
+    _sheetYear=auto.year;
+  }
+  E('ms-sub').textContent='Day '+new Date().getDate()+' → auto suggests '+auto.month+' '+auto.year;
+  renderMonthGrid();
+  E('month-sheet').classList.add('open');
+}
+
+function closeMonthSheet(e){
+  if(!e||e.target===E('month-sheet')) E('month-sheet').classList.remove('open');
+}
+
+function shiftYear(d){
+  _sheetYear+=d;
+  renderMonthGrid();
+  E('ms-year-val').textContent=_sheetYear;
+}
+
+function renderMonthGrid(){
+  const auto=autoMonth();
+  E('ms-year-val').textContent=_sheetYear;
+  const grid=E('ms-month-grid'); grid.innerHTML='';
+  MONTHS.forEach((m,i)=>{
+    const btn=document.createElement('button');
+    btn.className='ms-month-btn';
+    btn.textContent=m.slice(0,3);
+    const isSelected=i===_sheetMonth&&_sheetYear===parseInt(E('ms-year-val').textContent);
+    const isSuggested=m===auto.month&&_sheetYear===auto.year;
+    if(isSelected) btn.classList.add('active');
+    else if(isSuggested) btn.classList.add('suggested');
+    btn.onclick=()=>{
+      _sheetMonth=i;
+      cfg.billingMonth=MONTHS[i];
+      cfg.billingYear=String(_sheetYear);
+      txPut('settings',cfg);
+      updateMonthChip();
+      renderMonthGrid();
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function resetToAuto(){
+  cfg.billingMonth=''; cfg.billingYear='';
+  txPut('settings',cfg);
+  updateMonthChip();
+  E('month-sheet').classList.remove('open');
+  toast('Billing month set to automatic','ok');
+}
 function todayStr(){return new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}
 function toast(msg,type=''){const t=E('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');setTimeout(()=>t.className='',2800)}
 function showConfirm(icon,title,text,okLabel,cb){E('ci').textContent=icon;E('ct').textContent=title;E('cx').textContent=text;const b=E('confirm-ok');b.textContent=okLabel;b.onclick=()=>{closeConfirm();cb&&cb()};E('confirm-overlay').classList.add('open')}
@@ -889,7 +1033,7 @@ async function saveSettings(){
   cfg.rate=E('s-rate').value||'6.5';cfg.rent=E('s-rent').value||'5700';
   cfg.lastReading=E('s-last-reading').value;cfg.billingMonth=E('s-month').value;cfg.billingYear=E('s-year').value;
   await txPut('settings',cfg);
-  E('hdr-prop').textContent=cfg.property;E('hdr-month').textContent=displayMonth();
+  E('hdr-prop').textContent=cfg.property;updateMonthChip();
   E('prev-val').textContent=cfg.lastReading?parseFloat(cfg.lastReading).toFixed(1):'—';
   const btn=E('save-settings-btn');btn.className='btn btn-success mb16';btn.textContent='✓ Saved!';
   setTimeout(()=>{btn.className='btn btn-primary mb16';btn.textContent='Save Settings'},2200);
@@ -948,7 +1092,7 @@ async function importData(e){
       await txClr('settings');await txClr('bills');
       cfg={...cfg,...data.settings,id:'config'};await txPut('settings',cfg);
       for(const b of data.bills){const{id,...r}=b;await txPut('bills',r)}
-      E('hdr-prop').textContent=cfg.property;E('hdr-month').textContent=displayMonth();
+      E('hdr-prop').textContent=cfg.property;updateMonthChip();
       E('prev-val').textContent=cfg.lastReading?parseFloat(cfg.lastReading).toFixed(1):'—';
       toast('✓ '+data.bills.length+' bills imported!','ok');
     });
@@ -961,7 +1105,7 @@ async function init(){
   await openDB();
   const stored=await txGet('settings','config');
   if(stored)cfg={...cfg,...stored};
-  E('hdr-prop').textContent=cfg.property;E('hdr-month').textContent=displayMonth();
+  E('hdr-prop').textContent=cfg.property;updateMonthChip();
   E('prev-val').textContent=cfg.lastReading?parseFloat(cfg.lastReading).toFixed(1):'—';
   // Auto-load last bill's current photo as this month's prev photo
   try{
