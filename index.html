@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<meta name="theme-color" content="#05080F"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>Meter Billing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#05080F;--card:#0D1420;--surface:#080C16;--border:#1A2540;--border2:#0E1628;
+  --amber:#F5A623;--amber-dim:#C4841A;--amber-glow:rgba(245,166,35,0.12);
+  --amber-glow2:rgba(245,166,35,0.06);--text:#EEF2FF;--muted:#5A6E96;
+  --muted2:#2E3D5A;--success:#22D3A5;--danger:#FF5F6D;
+  --mono:'Share Tech Mono',monospace;--sans:'DM Sans',sans-serif;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:var(--sans);color:var(--text);display:flex;justify-content:center}
+#root{width:100%;max-width:480px;height:100dvh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+input,select,button{font-family:var(--sans)}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+input::placeholder{color:var(--muted2)}
+select option{background:var(--card)}
+
+#content{flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 18px 110px}
+#content::-webkit-scrollbar{width:3px}
+#content::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* Header */
+#header{padding:18px 18px 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.hdr-title{font-size:10px;color:var(--muted);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:3px}
+.hdr-prop{font-size:17px;font-weight:800}
+.month-badge{background:var(--amber-glow);border:1px solid var(--amber-dim);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--amber);font-weight:700}
+
+/* Nav */
+#nav{position:absolute;bottom:0;left:0;right:0;background:rgba(5,8,15,0.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border2);display:flex;padding:10px 0 max(18px,env(safe-area-inset-bottom));z-index:100}
+.nav-btn{flex:1;background:none;border:none;cursor:pointer;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 0;transition:color .2s}
+.nav-btn.active{color:var(--amber)}
+.nav-icon{font-size:19px;line-height:1}
+.nav-lbl{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.nav-ind{width:20px;height:2px;background:var(--amber);border-radius:2px;margin-top:3px;opacity:0;transition:opacity .2s}
+.nav-btn.active .nav-ind{opacity:1}
+
+/* Screens */
+.screen{display:none;animation:fadeUp .35s ease}
+.screen.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.sec-lbl{font-size:10px;color:var(--amber);letter-spacing:2.5px;text-transform:uppercase;font-weight:700;margin-bottom:10px}
+
+/* Reading */
+.prev-pill{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.prev-label{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:5px}
+.prev-val-mono{font-family:var(--mono);font-size:26px;color:var(--muted);letter-spacing:2px}
+
+.inp-wrap{position:relative;margin-bottom:6px}
+.reading-inp{width:100%;background:var(--surface);border:2px solid var(--border);border-radius:14px;padding:20px 72px 20px 20px;font-family:var(--mono);font-size:36px;color:var(--text);letter-spacing:4px;transition:border-color .25s,box-shadow .25s;outline:none}
+.reading-inp:focus,.reading-inp.valid{border-color:var(--amber);box-shadow:0 0 0 4px var(--amber-glow)}
+.reading-inp.invalid{border-color:var(--danger);box-shadow:none}
+.inp-unit{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--muted);pointer-events:none}
+.inp-err{font-size:11px;color:var(--danger);padding:4px 4px 10px}
+
+/* Meter tape */
+.meter-tape{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;margin-bottom:14px}
+.tape-top{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;display:flex;justify-content:space-between}
+.tape-units-txt{font-family:var(--mono);font-size:12px;color:var(--success)}
+.tape-row{display:flex;align-items:center;gap:10px}
+.tape-side{flex:1}
+.tape-side.r{text-align:right}
+.tape-side-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+.digit-row{display:flex;gap:2px;align-items:center}
+.digit-row.r{justify-content:flex-end}
+.dbox{background:#0A0E18;border:1px solid var(--border2);border-radius:4px;width:26px;height:34px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:18px;color:var(--muted)}
+.dbox.lit{background:#10192E;border-color:var(--amber-dim);color:var(--amber)}
+.dbox-dec{background:#1A0A00;border:1px solid #6B3A00;border-radius:4px;width:26px;height:34px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:18px;color:#F0A500}
+.tape-arr{flex-shrink:0;color:var(--amber);font-size:16px}
+
+/* Bill rows */
+.bill-row{padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border2)}
+.bill-row:last-child{border-bottom:none}
+.bill-row-lbl{font-size:13px;color:var(--muted)}
+.bill-row-val{font-family:var(--mono);font-size:15px;font-weight:600}
+.bill-total-row{padding:16px 18px;display:flex;justify-content:space-between;align-items:center;background:var(--amber-glow2);border-top:1px solid var(--border)}
+.bill-total-lbl{font-size:14px;font-weight:700}
+.bill-total-val{font-family:var(--mono);font-size:26px;color:var(--amber);font-weight:700}
+
+/* Buttons */
+.btn{width:100%;border:none;border-radius:14px;padding:16px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;transition:all .2s;font-family:var(--sans)}
+.btn-primary{background:linear-gradient(135deg,var(--amber),var(--amber-dim));color:#0A0800;box-shadow:0 6px 24px rgba(245,166,35,0.25)}
+.btn-secondary{background:var(--card);border:1px solid var(--border);color:var(--text)}
+.btn-secondary:hover{border-color:var(--amber-dim);color:var(--amber)}
+.btn-success{background:linear-gradient(135deg,var(--success),#18A87F);color:#fff;box-shadow:0 6px 20px rgba(34,211,165,0.22)}
+.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.btn-sm{padding:10px 14px;font-size:12px;border-radius:10px}
+.btn-xs{padding:7px 12px;font-size:11px;border-radius:8px;width:auto}
+
+/* Photo slots */
+.photo-section{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.photo-sec-title{font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px}
+.photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.photo-slot{border-radius:10px;overflow:hidden;background:var(--surface);border:1px dashed var(--border)}
+.photo-slot-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;text-align:center;padding:6px 4px 0}
+.photo-slot-ph{height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+.photo-slot-ph .ico{font-size:20px}
+.photo-slot-ph .txt{font-size:9px;color:var(--muted);text-align:center;line-height:1.3}
+.photo-slot-img{width:100%;height:100px;object-fit:cover;display:block;position:relative}
+.photo-slot-btns{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:5px}
+.psb{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 4px;font-size:10px;color:var(--text);cursor:pointer;text-align:center;font-family:var(--sans);font-weight:600;transition:all .15s;position:relative}
+.psb:hover{border-color:var(--amber-dim);color:var(--amber)}
+.photo-preview-wrap{position:relative}
+.photo-rm{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.75);border:none;color:var(--danger);border-radius:5px;width:22px;height:22px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--sans);z-index:2}
+
+/* Print card */
+.print-card{background:#0A1020;border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-bottom:14px}
+.print-hdr{background:linear-gradient(135deg,#0F1E40,#080C16);padding:20px 20px 16px;border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.print-hdr::after{content:'';position:absolute;top:-24px;right:-24px;width:100px;height:100px;background:var(--amber-glow);border-radius:50%}
+.print-badge{font-size:9px;color:var(--amber);letter-spacing:3px;text-transform:uppercase;margin-bottom:4px;font-weight:700}
+.print-prop{font-size:19px;font-weight:800;margin-bottom:2px}
+.print-tenant{font-size:12px;color:var(--muted)}
+.print-date-blk{position:absolute;top:18px;right:18px;text-align:right;z-index:1}
+.print-month{font-size:13px;font-weight:700;color:var(--amber)}
+.print-date{font-size:10px;color:var(--muted);margin-top:2px}
+.print-meter-sec{padding:14px 20px;background:#070C16;border-bottom:1px solid var(--border)}
+.print-meter-row{display:flex;align-items:center;gap:12px}
+.print-meter-side{flex:1}
+.print-meter-side.r{text-align:right}
+.print-meter-sublbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
+.print-meter-val{font-family:var(--mono);font-size:22px;letter-spacing:2px}
+.print-meter-val.prev{color:var(--muted)}
+.print-meter-val.curr{color:var(--amber)}
+.print-arrow-blk{text-align:center}
+.print-arrow-units{font-family:var(--mono);font-size:11px;color:var(--success);margin-bottom:3px}
+.print-arrow-sym{font-size:18px;color:var(--amber)}
+.print-photos-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 20px;background:#070C16;border-bottom:1px solid var(--border)}
+.print-photo-slot{border-radius:8px;overflow:hidden;border:1px solid var(--border2)}
+.print-photo-slot img{width:100%;height:90px;object-fit:cover;display:block}
+.print-photo-cap{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;text-align:center;padding:5px;background:#080C16}
+.print-bill-row{padding:12px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border2)}
+.print-bill-name{font-size:13px;font-weight:600}
+.print-bill-detail{font-size:10px;color:var(--muted);margin-top:2px}
+.print-bill-val{font-family:var(--mono);font-size:15px;font-weight:600}
+.print-total-blk{padding:16px 20px;background:linear-gradient(135deg,#1A1000,#0E0900);border-top:1px solid #2A1800;display:flex;justify-content:space-between;align-items:center}
+.print-total-lbl{font-size:11px;color:var(--amber-dim);font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.print-total-month{font-size:10px;color:var(--muted);margin-top:3px}
+.print-total-val{font-family:var(--mono);font-size:30px;color:var(--amber);font-weight:700}
+.print-footer{padding:9px 20px;background:var(--card);border-top:1px solid var(--border);display:flex;justify-content:space-between}
+.print-footer span{font-size:9px;color:var(--muted)}
+
+/* History */
+.hist-item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px 16px;margin-bottom:10px;cursor:pointer;transition:border-color .2s}
+.hist-item:hover{border-color:var(--amber-dim)}
+.hist-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.hist-month{font-size:15px;font-weight:700}
+.hist-total{font-family:var(--mono);font-size:17px;color:var(--amber)}
+.hist-actions{display:flex;gap:5px;align-items:center;flex-shrink:0}
+.hist-btn{background:none;border:1px solid var(--border);border-radius:7px;cursor:pointer;color:var(--muted);font-size:13px;padding:5px 7px;transition:all .15s;font-family:var(--sans);line-height:1}
+.hist-btn:hover{color:var(--amber);border-color:var(--amber-dim)}
+.hist-btn.del:hover{color:var(--danger);border-color:rgba(255,95,109,0.4)}
+.hist-bottom{display:flex;gap:12px}
+.hist-stat{flex:1}
+.hist-stat-lbl{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px}
+.hist-stat-val{font-family:var(--mono);font-size:13px}
+
+/* Settings */
+.settings-section{margin-bottom:22px}
+.settings-sec-title{font-size:10px;color:var(--amber);letter-spacing:2.5px;text-transform:uppercase;font-weight:700;margin-bottom:10px}
+.settings-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.field-lbl{font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+.field-inp{width:100%;background:var(--surface);border:1.5px solid var(--border);color:var(--text);border-radius:9px;padding:11px 13px;font-size:15px;outline:none;transition:border-color .2s;font-family:var(--sans)}
+.field-inp.mono{font-family:var(--mono);letter-spacing:2px}
+.field-inp:focus{border-color:var(--amber)}
+.field-row{display:flex;gap:8px}
+.field-row .fw{flex:1}
+select.field-inp{cursor:pointer}
+.info-box{background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.18);border-radius:10px;padding:14px}
+.info-box-txt{font-size:11px;color:#93B4DD;line-height:1.7}
+.export-box{background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:12px}
+.export-box-txt{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:12px}
+
+/* Empty */
+.empty{text-align:center;padding:48px 20px;color:var(--muted)}
+.empty-icon{font-size:48px;margin-bottom:14px}
+.empty-text{font-size:14px;line-height:1.7}
+
+/* Toast */
+#toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-60px);background:#1A2540;border:1px solid var(--border);border-radius:10px;padding:11px 18px;font-size:13px;font-weight:600;color:var(--text);z-index:999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;white-space:nowrap;max-width:90vw}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast.ok{border-color:var(--success);color:var(--success)}
+#toast.err{border-color:var(--danger);color:var(--danger)}
+
+/* Spinner */
+#spinner-overlay{display:none;position:fixed;inset:0;background:rgba(5,8,15,0.88);z-index:500;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+#spinner-overlay.open{display:flex}
+.spinner{width:38px;height:38px;border:3px solid var(--amber);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+.spinner-lbl{font-size:13px;color:var(--muted)}
+
+/* Modal */
+#modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:200;align-items:flex-end;justify-content:center}
+#modal-overlay.open{display:flex}
+#modal-box{background:var(--card);border:1px solid var(--border);border-top:3px solid var(--amber-dim);border-radius:20px 20px 0 0;padding:22px 18px max(26px,env(safe-area-inset-bottom));width:100%;max-width:480px;animation:slideUp .3s ease;max-height:90dvh;overflow-y:auto}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-close-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.modal-title{font-size:16px;font-weight:800}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
+.modal-x{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:2px 4px}
+
+/* Confirm */
+#confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:300;align-items:center;justify-content:center;padding:20px}
+#confirm-overlay.open{display:flex}
+#confirm-box{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:24px 20px;width:100%;max-width:340px;text-align:center;animation:fadeUp .25s ease}
+.confirm-icon{font-size:38px;margin-bottom:10px}
+.confirm-title{font-size:15px;font-weight:700;margin-bottom:8px}
+.confirm-text{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:18px}
+.confirm-btns{display:flex;gap:10px}
+
+/* Utility */
+.hide{display:none!important}
+.mt12{margin-top:12px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}
+
+/* Print */
+@media print{
+  body{background:#fff!important}
+  #root{max-width:100%!important;height:auto!important;overflow:visible!important}
+  #header,#nav,#content>.screen:not(.active),.photo-section,.btn-grid,.btn,.no-print{display:none!important}
+  #content{padding:0!important;overflow:visible!important}
+  .print-card{border:1px solid #ddd!important;background:#fff!important}
+  .print-hdr{background:#f8f9fa!important}
+  .print-prop{color:#000!important}
+  .print-month{color:#B8860B!important}
+  .print-tenant,.print-date,.print-meter-sublbl,.print-bill-detail{color:#666!important}
+  .print-meter-val.prev{color:#666!important}
+  .print-meter-val.curr,.print-total-val,.print-bill-val{color:#B8860B!important}
+  .print-total-blk{background:#FFF8E7!important}
+  .print-total-lbl{color:#B8860B!important}
+  .print-arrow-units{color:#28a745!important}
+  .print-bill-name{color:#000!important}
+  .print-footer{background:#f8f9fa!important}
+  .print-footer span{color:#999!important}
+  .print-photos-row{background:#f0f0f0!important}
+  .print-photo-cap{background:#e0e0e0!important;color:#666!important}
+}
+</style>
+</head>
+<body>
+<div id="root">
+
+<!-- Header -->
+<div id="header">
+  <div>
+    <div class="hdr-title">Meter Billing</div>
+    <div class="hdr-prop" id="hdr-prop">My Property</div>
+  </div>
+  <div class="month-badge" id="hdr-month">—</div>
+</div>
+
+<!-- Content -->
+<div id="content">
+
+  <!-- READING -->
+  <div id="screen-reading" class="screen">
+    <div class="prev-pill">
+      <div>
+        <div class="prev-label">Previous Reading</div>
+        <div class="prev-val-mono"><span id="prev-val">—</span> <span style="font-size:11px">kWh</span></div>
+      </div>
+      <span style="font-size:30px">📟</span>
+    </div>
+    <div style="margin-bottom:18px">
+      <div class="sec-lbl">↳ New Meter Reading</div>
+      <div class="inp-wrap">
+        <input type="number" step="0.1" id="new-inp" class="reading-inp" placeholder="0000.0"/>
+        <span class="inp-unit">kWh</span>
+      </div>
+      <div id="inp-err" class="inp-err hide"></div>
+    </div>
+    <div id="live-preview" class="hide">
+      <div class="meter-tape" style="margin-bottom:12px">
+        <div class="tape-top"><span>Meter Run</span><span class="tape-units-txt" id="tape-units"></span></div>
+        <div class="tape-row">
+          <div class="tape-side"><div class="tape-side-lbl">Previous</div><div class="digit-row" id="tape-prev"></div></div>
+          <div class="tape-arr">→</div>
+          <div class="tape-side r"><div class="tape-side-lbl" style="text-align:right">Current</div><div class="digit-row r" id="tape-curr"></div></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="bill-row"><span class="bill-row-lbl" id="elec-lbl">Electricity</span><span class="bill-row-val" id="elec-val">—</span></div>
+        <div class="bill-row"><span class="bill-row-lbl">House Rent</span><span class="bill-row-val" id="rent-val">—</span></div>
+        <div class="bill-total-row"><span class="bill-total-lbl">Total Amount</span><span class="bill-total-val" id="total-val">—</span></div>
+      </div>
+      <button class="btn btn-primary" onclick="goToBill()"><span>🧾</span> Generate & Share Bill</button>
+    </div>
+    <div id="reading-empty" class="empty">
+      <div class="empty-icon">🔌</div>
+      <div class="empty-text">Enter the current meter reading<br/>to instantly calculate the bill</div>
+    </div>
+  </div>
+
+  <!-- BILL -->
+  <div id="screen-bill" class="screen">
+    <div id="bill-no-reading" class="empty">
+      <div class="empty-icon">📋</div>
+      <div class="empty-text">Enter a meter reading first</div>
+      <button class="btn btn-primary mt12" style="width:auto;padding:12px 24px;font-size:14px" onclick="switchTab('reading')">Go to Reading ⚡</button>
+    </div>
+    <div id="bill-content" class="hide">
+
+      <!-- Printable bill card -->
+      <div id="print-bill" class="print-card">
+        <div class="print-hdr">
+          <div class="print-badge">Electricity + Rent Bill</div>
+          <div class="print-prop" id="bp-prop"></div>
+          <div class="print-tenant" id="bp-tenant"></div>
+          <div class="print-date-blk">
+            <div class="print-month" id="bp-month"></div>
+            <div class="print-date" id="bp-date"></div>
+          </div>
+        </div>
+        <div class="print-meter-sec">
+          <div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">Meter Reading</div>
+          <div class="print-meter-row">
+            <div class="print-meter-side"><div class="print-meter-sublbl">Previous</div><div class="print-meter-val prev" id="bp-prev"></div></div>
+            <div class="print-arrow-blk"><div class="print-arrow-units" id="bp-units"></div><div class="print-arrow-sym">→</div></div>
+            <div class="print-meter-side r"><div class="print-meter-sublbl" style="text-align:right">Current</div><div class="print-meter-val curr" id="bp-curr"></div></div>
+          </div>
+        </div>
+        <div class="print-photos-row hide" id="bp-photos-row">
+          <div class="print-photo-slot"><img id="bp-prev-img" alt="Previous Meter"/><div class="print-photo-cap">Previous Meter</div></div>
+          <div class="print-photo-slot"><img id="bp-curr-img" alt="Current Meter"/><div class="print-photo-cap">Current Meter</div></div>
+        </div>
+        <div>
+          <div class="print-bill-row">
+            <div><div class="print-bill-name">Electricity</div><div class="print-bill-detail" id="bp-elec-detail"></div></div>
+            <div class="print-bill-val" id="bp-elec-val"></div>
+          </div>
+          <div class="print-bill-row" style="border-bottom:none">
+            <div><div class="print-bill-name">House Rent</div><div class="print-bill-detail">Monthly</div></div>
+            <div class="print-bill-val" id="bp-rent-val"></div>
+          </div>
+        </div>
+        <div class="print-total-blk">
+          <div><div class="print-total-lbl">Total Due</div><div class="print-total-month" id="bp-total-month"></div></div>
+          <div class="print-total-val" id="bp-total-val"></div>
+        </div>
+        <div class="print-footer"><span>Meter Billing App</span><span id="bp-footer-date"></span></div>
+      </div>
+
+      <!-- Photo proof (2 slots: prev + curr) -->
+      <div class="photo-section no-print">
+        <div class="photo-sec-title">Meter Photo Proof</div>
+        <div class="photo-grid">
+          <!-- Previous meter -->
+          <div class="photo-slot">
+            <div class="photo-slot-lbl">Previous Meter</div>
+            <div id="prev-ph" class="photo-slot-ph"><span class="ico">📷</span><span class="txt">Previous<br/>reading</span></div>
+            <div id="prev-pw" class="photo-preview-wrap hide">
+              <img id="prev-pimg" class="photo-slot-img" alt=""/>
+              <button class="photo-rm" onclick="removePhoto('prev')">✕</button>
+            </div>
+            <div class="photo-slot-btns">
+              <button class="psb" onclick="openPicker('prev','camera')">📷 Camera</button>
+              <button class="psb" onclick="openPicker('prev','gallery')">🖼 Gallery</button>
+            </div>
+          </div>
+          <!-- Current meter -->
+          <div class="photo-slot">
+            <div class="photo-slot-lbl">Current Meter</div>
+            <div id="curr-ph" class="photo-slot-ph"><span class="ico">📷</span><span class="txt">New<br/>reading</span></div>
+            <div id="curr-pw" class="photo-preview-wrap hide">
+              <img id="curr-pimg" class="photo-slot-img" alt=""/>
+              <button class="photo-rm" onclick="removePhoto('curr')">✕</button>
+            </div>
+            <div class="photo-slot-btns">
+              <button class="psb" onclick="openPicker('curr','camera')">📷 Camera</button>
+              <button class="psb" onclick="openPicker('curr','gallery')">🖼 Gallery</button>
+            </div>
+          </div>
+        </div>
+        <!-- Hidden inputs -->
+        <input type="file" id="pi-prev-camera" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto('prev',this)"/>
+        <input type="file" id="pi-prev-gallery" accept="image/*" style="display:none" onchange="handlePhoto('prev',this)"/>
+        <input type="file" id="pi-curr-camera" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto('curr',this)"/>
+        <input type="file" id="pi-curr-gallery" accept="image/*" style="display:none" onchange="handlePhoto('curr',this)"/>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="btn-grid no-print">
+        <button class="btn btn-secondary btn-sm" onclick="printBill()">🖨️ Print / PDF</button>
+        <button class="btn btn-secondary btn-sm" onclick="shareCurrentBill()">📤 Share Image</button>
+      </div>
+      <button class="btn btn-primary mb12 no-print" id="save-btn" onclick="saveBill()"><span>💾</span> Save & Update Reading</button>
+      <div id="save-ok" class="hide" style="text-align:center;font-size:12px;color:var(--success);padding-bottom:8px;animation:fadeUp .3s ease">✓ Saved. Reading updated for next month.</div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="screen-history" class="screen">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div>
+        <div class="sec-lbl" style="margin:0 0 2px">Billing History</div>
+        <div style="font-size:11px;color:var(--muted)" id="hist-count">0 records</div>
+      </div>
+      <button class="btn btn-secondary btn-xs" onclick="exportData()">⬆ Export</button>
+    </div>
+    <div id="hist-list"></div>
+    <div id="hist-empty" class="empty hide"><div class="empty-icon">📂</div><div class="empty-text">No bills saved yet.<br/>Generate your first bill!</div></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="screen-settings" class="screen">
+    <div class="settings-section">
+      <div class="settings-sec-title">Property</div>
+      <div class="settings-card">
+        <div><div class="field-lbl">Property Name</div><input type="text" id="s-property" class="field-inp" placeholder="My Property"/></div>
+        <div><div class="field-lbl">Tenant Name</div><input type="text" id="s-tenant" class="field-inp" placeholder="Tenant"/></div>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-sec-title">Rates</div>
+      <div class="settings-card">
+        <div><div class="field-lbl">Electricity Rate (₹ per kWh)</div><input type="number" step="0.1" id="s-rate" class="field-inp mono" placeholder="6.5"/></div>
+        <div><div class="field-lbl">Monthly House Rent (₹)</div><input type="number" id="s-rent" class="field-inp mono" placeholder="5700"/></div>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-sec-title">Meter Baseline</div>
+      <div class="settings-card">
+        <div><div class="field-lbl">Last Meter Reading (kWh)</div><input type="number" step="0.1" id="s-last-reading" class="field-inp mono" placeholder="0000.0"/></div>
+        <div>
+          <div class="field-lbl">Billing Month</div>
+          <div class="field-row">
+            <div class="fw"><select id="s-month" class="field-inp"><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div>
+            <div class="fw"><select id="s-year" class="field-inp"></select></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary mb16" id="save-settings-btn" onclick="saveSettings()">Save Settings</button>
+    <div class="settings-section">
+      <div class="settings-sec-title">Data Backup</div>
+      <div class="export-box">
+        <div class="export-box-txt">Export all bills + settings as a <strong style="color:var(--text)">compressed .mbz file</strong> (gzip). Much smaller than plain JSON. Import on any device to restore — perfect when changing phones. Old .json backups still work.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <button class="btn btn-secondary btn-sm" onclick="exportData()"><span>⬆</span> Export .mbz</button>
+          <button class="btn btn-secondary btn-sm" onclick="E('import-inp').click()"><span>⬇</span> Import</button>
+        </div>
+        <input type="file" id="import-inp" accept=".mbz,.json,application/json,application/octet-stream" style="display:none" onchange="importData(event)"/>
+      </div>
+      <div class="info-box">
+        <div class="info-box-txt">💡 <strong style="color:var(--text)">Tip:</strong> After each bill, tap <em>Save & Update Reading</em>. Last month's meter photo auto-loads as "Previous" next month. Export regularly as backup.</div>
+      </div>
+    </div>
+    <div style="text-align:center;padding:16px 0 4px;font-size:10px;color:var(--muted2)">Meter Billing App • Data stored on device • GitHub Pages ready</div>
+  </div>
+</div>
+
+<!-- Nav -->
+<nav id="nav">
+  <button class="nav-btn active" id="nav-reading" onclick="switchTab('reading')"><span class="nav-icon">⚡</span><span class="nav-lbl">Reading</span><div class="nav-ind"></div></button>
+  <button class="nav-btn" id="nav-bill" onclick="switchTab('bill')"><span class="nav-icon">🧾</span><span class="nav-lbl">Bill</span><div class="nav-ind"></div></button>
+  <button class="nav-btn" id="nav-history" onclick="switchTab('history')"><span class="nav-icon">📂</span><span class="nav-lbl">History</span><div class="nav-ind"></div></button>
+  <button class="nav-btn" id="nav-settings" onclick="switchTab('settings')"><span class="nav-icon">⚙️</span><span class="nav-lbl">Settings</span><div class="nav-ind"></div></button>
+</nav>
+
+<div id="toast"></div>
+
+<div id="spinner-overlay"><div class="spinner"></div><div class="spinner-lbl">Generating bill image…</div></div>
+
+<div id="modal-overlay" onclick="closeModal(event)">
+  <div id="modal-box">
+    <div class="modal-close-row"><div class="modal-title" id="modal-title"></div><button class="modal-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-sub" id="modal-sub"></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div id="confirm-overlay">
+  <div id="confirm-box">
+    <div class="confirm-icon" id="ci"></div>
+    <div class="confirm-title" id="ct"></div>
+    <div class="confirm-text" id="cx"></div>
+    <div class="confirm-btns">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeConfirm()">Cancel</button>
+      <button class="btn" style="flex:1;background:rgba(255,95,109,0.12);border:1px solid rgba(255,95,109,0.28);color:var(--danger)" id="confirm-ok">Delete</button>
+    </div>
+  </div>
+</div>
+
+</div>
+<script>
+// ── IndexedDB ──────────────────────────────────────────────────
+const DB_NAME='MeterBillingDB',DB_VER=2; let db;
+function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,DB_VER);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('settings'))d.createObjectStore('settings',{keyPath:'id'});if(!d.objectStoreNames.contains('bills'))d.createObjectStore('bills',{keyPath:'id',autoIncrement:true})};r.onsuccess=e=>{db=e.target.result;res(db)};r.onerror=e=>rej(e.target.error)})}
+const txGet=(s,k)=>new Promise((r,j)=>{const q=db.transaction(s,'readonly').objectStore(s).get(k);q.onsuccess=()=>r(q.result);q.onerror=e=>j(e)});
+const txPut=(s,v)=>new Promise((r,j)=>{const q=db.transaction(s,'readwrite').objectStore(s).put(v);q.onsuccess=()=>r(q.result);q.onerror=e=>j(e)});
+const txDel=(s,k)=>new Promise((r,j)=>{const q=db.transaction(s,'readwrite').objectStore(s).delete(k);q.onsuccess=()=>r();q.onerror=e=>j(e)});
+const txAll=(s)=>new Promise((r,j)=>{const q=db.transaction(s,'readonly').objectStore(s).getAll();q.onsuccess=()=>r(q.result);q.onerror=e=>j(e)});
+const txClr=(s)=>new Promise((r,j)=>{const q=db.transaction(s,'readwrite').objectStore(s).clear();q.onsuccess=()=>r();q.onerror=e=>j(e)});
+
+// ── State ──────────────────────────────────────────────────────
+let cfg={id:'config',property:'My Property',tenant:'Tenant',rate:'6.5',rent:'5700',lastReading:'',billingMonth:'',billingYear:''};
+let photos={prev:null,curr:null};
+let billSaved=false;
+
+// ── Helpers ────────────────────────────────────────────────────
+const fmtN=n=>new Intl.NumberFormat('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
+const fmtINR=n=>'₹'+fmtN(n);
+const E=id=>document.getElementById(id);
+const tog=(id,hide)=>E(id).classList.toggle('hide',hide);
+function displayMonth(){const M=['January','February','March','April','May','June','July','August','September','October','November','December'];if(cfg.billingMonth&&cfg.billingYear)return cfg.billingMonth+' '+cfg.billingYear;const n=new Date();return M[n.getMonth()]+' '+n.getFullYear()}
+function todayStr(){return new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}
+function toast(msg,type=''){const t=E('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');setTimeout(()=>t.className='',2800)}
+function showConfirm(icon,title,text,okLabel,cb){E('ci').textContent=icon;E('ct').textContent=title;E('cx').textContent=text;const b=E('confirm-ok');b.textContent=okLabel;b.onclick=()=>{closeConfirm();cb&&cb()};E('confirm-overlay').classList.add('open')}
+function closeConfirm(){E('confirm-overlay').classList.remove('open')}
+
+// ── Image compression ──────────────────────────────────────────
+function compressImage(file,maxW=1400,quality=0.78){
+  return new Promise(res=>{
+    const img=new Image(),url=URL.createObjectURL(file);
+    img.onload=()=>{URL.revokeObjectURL(url);const sc=Math.min(1,maxW/img.width),w=Math.round(img.width*sc),h=Math.round(img.height*sc),c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',quality))};
+    img.onerror=()=>{URL.revokeObjectURL(url);res(null)};
+    img.src=url;
+  });
+}
+
+// ── Photo handling ─────────────────────────────────────────────
+function openPicker(which,mode){E('pi-'+which+'-'+mode).click()}
+async function handlePhoto(which,inp){
+  const f=inp.files[0];if(!f)return;
+  const b64=await compressImage(f);inp.value='';if(!b64)return;
+  photos[which]=b64;setPhotoUI(which,b64);syncBillPhotos();
+}
+function setPhotoUI(which,b64){
+  if(b64){E(which+'-pimg').src=b64;tog(which+'-ph',true);tog(which+'-pw',false)}
+  else{tog(which+'-ph',false);tog(which+'-pw',true)}
+}
+function removePhoto(which){photos[which]=null;setPhotoUI(which,null);syncBillPhotos()}
+function syncBillPhotos(){
+  const has=photos.prev||photos.curr;
+  tog('bp-photos-row',!has);
+  if(photos.prev)E('bp-prev-img').src=photos.prev;
+  if(photos.curr)E('bp-curr-img').src=photos.curr;
+}
+
+// ── Tabs ───────────────────────────────────────────────────────
+function switchTab(tab){
+  ['reading','bill','history','settings'].forEach(t=>{
+    E('screen-'+t).classList.toggle('active',t===tab);
+    E('nav-'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='bill')refreshBill();
+  if(tab==='history')loadHistory();
+  if(tab==='settings')populateSettings();
+}
+function goToBill(){switchTab('bill')}
+
+// ── Reading screen ─────────────────────────────────────────────
+function getV(){
+  const prev=parseFloat(cfg.lastReading)||0,curr=parseFloat(E('new-inp').value)||0;
+  const units=curr>prev?+((curr-prev).toFixed(1)):0;
+  const rate=parseFloat(cfg.rate)||0,rent=parseFloat(cfg.rent)||0;
+  const elec=+(units*rate).toFixed(2),total=elec+rent;
+  const valid=E('new-inp').value!==''&&curr>prev;
+  return{prev,curr,units,rate,rent,elec,total,valid};
+}
+function buildDigits(container,valStr,lit){
+  const[wh,dc]=String(parseFloat(valStr).toFixed(1)).split('.');
+  const digs=wh.padStart(4,'0').split('');
+  container.innerHTML='';
+  digs.forEach(d=>{const b=document.createElement('div');b.className='dbox'+(lit?' lit':'');b.textContent=d;container.appendChild(b)});
+  const dot=document.createElement('div');dot.style.cssText='color:var(--muted2);font-size:11px;margin:0 1px;line-height:34px;font-family:var(--mono)';dot.textContent='.';container.appendChild(dot);
+  const db=document.createElement('div');db.className='dbox-dec';db.textContent=dc||'0';container.appendChild(db);
+}
+E('new-inp').addEventListener('input',()=>{
+  const v=getV(),has=E('new-inp').value!=='';
+  E('new-inp').classList.remove('valid','invalid');
+  if(has)E('new-inp').classList.add(v.valid?'valid':'invalid');
+  if(has&&!v.valid){E('inp-err').textContent='⚠ Must be greater than '+v.prev.toFixed(1);tog('inp-err',false)}else tog('inp-err',true);
+  tog('live-preview',!v.valid);tog('reading-empty',v.valid||has);
+  if(v.valid){
+    buildDigits(E('tape-prev'),v.prev.toFixed(1),false);buildDigits(E('tape-curr'),v.curr.toFixed(1),true);
+    E('tape-units').textContent='▲ '+v.units.toFixed(1)+' kWh used';
+    E('elec-lbl').textContent='Electricity ('+v.units.toFixed(1)+' u × ₹'+cfg.rate+')';
+    E('elec-val').textContent=fmtINR(v.elec);E('rent-val').textContent=fmtINR(v.rent);E('total-val').textContent=fmtINR(v.total);
+  }
+  billSaved=false;
+});
+
+// ── Bill screen ────────────────────────────────────────────────
+function refreshBill(){
+  const v=getV();tog('bill-no-reading',v.valid);tog('bill-content',!v.valid);if(!v.valid)return;
+  E('bp-prop').textContent=cfg.property;E('bp-tenant').textContent='Tenant: '+cfg.tenant;
+  E('bp-month').textContent=displayMonth();E('bp-date').textContent=todayStr();
+  E('bp-prev').textContent=v.prev.toFixed(1)+' kWh';E('bp-curr').textContent=v.curr.toFixed(1)+' kWh';
+  E('bp-units').textContent=v.units.toFixed(1)+' kWh';
+  E('bp-elec-detail').textContent=v.units.toFixed(1)+' units × ₹'+cfg.rate+'/kWh';
+  E('bp-elec-val').textContent=fmtINR(v.elec);E('bp-rent-val').textContent=fmtINR(v.rent);
+  E('bp-total-val').textContent=fmtINR(v.total);E('bp-total-month').textContent=displayMonth();E('bp-footer-date').textContent=todayStr();
+  syncBillPhotos();
+  const btn=E('save-btn');
+  if(billSaved){btn.className='btn btn-success mb12 no-print';btn.innerHTML='<span>✓</span> Saved!';tog('save-ok',false)}
+  else{btn.className='btn btn-primary mb12 no-print';btn.innerHTML='<span>💾</span> Save & Update Reading';tog('save-ok',true)}
+}
+async function saveBill(){
+  const v=getV();if(!v.valid)return;
+  const bill={month:displayMonth(),date:todayStr(),dateMs:Date.now(),property:cfg.property,tenant:cfg.tenant,prevReading:v.prev,currReading:v.curr,units:v.units,rate:parseFloat(cfg.rate),rent:v.rent,elecBill:v.elec,total:v.total,prevPhoto:photos.prev||null,photo:photos.curr||null};
+  await txPut('bills',bill);
+  cfg.lastReading=String(v.curr);await txPut('settings',cfg);
+  billSaved=true;refreshBill();E('prev-val').textContent=v.curr.toFixed(1);
+  toast('✓ Bill saved! Reading updated.','ok');
+}
+function printBill(){window.print()}
+async function shareCurrentBill(){
+  const v=getV();if(!v.valid){toast('Enter a reading first','err');return}
+  const bill={month:displayMonth(),date:todayStr(),property:cfg.property,tenant:cfg.tenant,prevReading:v.prev,currReading:v.curr,units:v.units,rate:parseFloat(cfg.rate),rent:v.rent,elecBill:v.elec,total:v.total,prevPhoto:photos.prev,photo:photos.curr};
+  await doShare(bill);
+}
+async function shareHistBill(bill){await doShare(bill)}
+
+// ── Canvas bill image ──────────────────────────────────────────
+function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath()}
+function loadImg(src){return new Promise(res=>{if(!src)return res(null);const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src})}
+
+async function generateBillCanvas(bill){
+  await document.fonts.ready;
+  const W=1080,PAD=68,CW=W-PAD*2;
+  const prevImg=await loadImg(bill.prevPhoto);
+  const currImg=await loadImg(bill.photo||bill.currPhoto);
+  const hasPhotos=!!(prevImg||currImg);
+
+  // Section heights
+  const BAR=14,HDR=460,DIV=2,METER=300,PHOTO_S=hasPhotos?480:0,ROW=112,TOTAL=230,FTR=100;
+  const H=BAR+HDR+DIV+METER+(hasPhotos?DIV+PHOTO_S:0)+DIV+ROW*2+TOTAL+FTR+BAR;
+
+  const canvas=document.createElement('canvas');
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+
+  // Background
+  ctx.fillStyle='#05080F';ctx.fillRect(0,0,W,H);
+
+  const amberG=(x1,y1,x2,y2)=>{const g=ctx.createLinearGradient(x1,y1,x2,y2);g.addColorStop(0,'#F5A623');g.addColorStop(1,'#C4841A');return g};
+
+  let y=0;
+
+  // Top amber bar
+  ctx.fillStyle=amberG(0,0,W,0);ctx.fillRect(0,y,W,BAR);y+=BAR;
+
+  // Header
+  const hY=y;
+  const hG=ctx.createLinearGradient(0,y,0,y+HDR);hG.addColorStop(0,'#101F42');hG.addColorStop(1,'#07101E');
+  ctx.fillStyle=hG;ctx.fillRect(0,y,W,HDR);
+  // Decorative glow circles
+  [170,100].forEach((r,i)=>{ctx.beginPath();ctx.arc(W-70,hY+80,r,0,Math.PI*2);ctx.fillStyle=`rgba(245,166,35,${0.04+i*0.03})`;ctx.fill()});
+
+  // Badge pill
+  y+=76;
+  ctx.font='700 22px "DM Sans"';const BADGE='ELECTRICITY + RENT BILL';const bw=ctx.measureText(BADGE).width+44;
+  rr(ctx,PAD,y-28,bw,40,20);ctx.fillStyle='rgba(245,166,35,0.14)';ctx.fill();
+  rr(ctx,PAD,y-28,bw,40,20);ctx.strokeStyle='rgba(245,166,35,0.38)';ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle='#F5A623';ctx.textBaseline='middle';ctx.fillText(BADGE,PAD+22,y-8);
+
+  // Property
+  y+=90;ctx.font='800 68px "DM Sans"';ctx.fillStyle='#EEF2FF';ctx.textBaseline='alphabetic';
+  let pt=bill.property||'My Property';
+  while(ctx.measureText(pt).width>CW-40&&pt.length>3)pt=pt.slice(0,-1);
+  ctx.fillText(pt,PAD,y);
+
+  // Tenant
+  y+=54;ctx.font='500 30px "DM Sans"';ctx.fillStyle='#6B7FA3';
+  ctx.fillText('Tenant: '+(bill.tenant||'Tenant'),PAD,y);
+
+  // Month/date top-right
+  ctx.font='700 28px "DM Sans"';ctx.fillStyle='#F5A623';ctx.textAlign='right';ctx.fillText(bill.month||'',W-PAD,hY+94);
+  ctx.font='400 22px "DM Sans"';ctx.fillStyle='#5A6E96';ctx.fillText(bill.date||'',W-PAD,hY+132);
+  ctx.textAlign='left';
+
+  y=hY+HDR;
+
+  // Divider
+  const div=(col='rgba(245,166,35,0.25)')=>{ctx.fillStyle=col;ctx.fillRect(0,y,W,DIV);y+=DIV};
+  div();
+
+  // Meter section
+  const mY=y;const mG=ctx.createLinearGradient(0,y,0,y+METER);mG.addColorStop(0,'#080C16');mG.addColorStop(1,'#050810');
+  ctx.fillStyle=mG;ctx.fillRect(0,y,W,METER);
+
+  y+=56;ctx.font='700 21px "DM Sans"';ctx.fillStyle='#F5A623';ctx.fillText('METER READING',PAD,y);
+  y+=58;
+
+  // Draw digit boxes
+  const BW=58,BH=76,BR=8,BG=7;
+  const drawDigits=(reading,sx,muted)=>{
+    const[wh,dc]=String(parseFloat(reading).toFixed(1)).split('.');
+    const digs=wh.padStart(4,'0').split('');let bx=sx;
+    digs.forEach(d=>{
+      rr(ctx,bx,y,BW,BH,BR);ctx.fillStyle=muted?'#0A0E18':'#10192E';ctx.fill();
+      rr(ctx,bx,y,BW,BH,BR);ctx.strokeStyle=muted?'#1C2840':'#C4841A';ctx.lineWidth=1.5;ctx.stroke();
+      ctx.font='400 42px "Share Tech Mono"';ctx.fillStyle=muted?'#4A5E80':'#F5A623';
+      ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(d,bx+BW/2,y+BH/2);
+      ctx.textAlign='left';ctx.textBaseline='alphabetic';bx+=BW+BG;
+    });
+    ctx.font='400 32px "Share Tech Mono"';ctx.fillStyle='#2E3D5A';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('.',bx+10,y+BH/2);ctx.textAlign='left';ctx.textBaseline='alphabetic';bx+=26;
+    rr(ctx,bx,y,BW,BH,BR);ctx.fillStyle='#1A0A00';ctx.fill();rr(ctx,bx,y,BW,BH,BR);ctx.strokeStyle='#6B3A00';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.font='400 42px "Share Tech Mono"';ctx.fillStyle='#F0A500';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(dc||'0',bx+BW/2,y+BH/2);ctx.textAlign='left';ctx.textBaseline='alphabetic';
+    return bx+BW;
+  };
+
+  // 4*(58+7)-7 + 26 + 58 = 325 per side
+  const RW=325,AW=80,TRW=RW*2+AW,rsx=Math.round((W-TRW)/2);
+
+  // Side labels
+  ctx.font='600 20px "DM Sans"';ctx.fillStyle='#4A5E80';
+  ctx.fillText('PREVIOUS',rsx,y-12);ctx.textAlign='right';ctx.fillText('CURRENT',rsx+TRW,y-12);ctx.textAlign='left';
+
+  drawDigits(bill.prevReading,rsx,true);
+  ctx.font='700 44px "DM Sans"';ctx.fillStyle='#F5A623';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('→',rsx+RW+AW/2,y+BH/2);ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  drawDigits(bill.currReading,rsx+RW+AW,false);
+
+  y+=BH+28;ctx.font='600 25px "DM Sans"';ctx.fillStyle='#22D3A5';ctx.textAlign='center';ctx.textBaseline='alphabetic';
+  ctx.fillText('▲ '+(bill.units||0).toFixed(1)+' kWh consumed this period',W/2,y);ctx.textAlign='left';
+
+  y=mY+METER;
+
+  // Photos section
+  if(hasPhotos){
+    div('rgba(245,166,35,0.2)');
+    const psY=y;ctx.fillStyle='#060A10';ctx.fillRect(0,y,W,PHOTO_S);
+    y+=50;ctx.font='700 21px "DM Sans"';ctx.fillStyle='#F5A623';ctx.fillText('METER PROOF',PAD,y);
+    y+=46;
+    const PH=PHOTO_S-50-46-50,PHW=(CW-18)/2;
+
+    const drawSlot=(img,px,lbl)=>{
+      rr(ctx,px,y,PHW,PH,14);ctx.fillStyle='#0A0E1A';ctx.fill();rr(ctx,px,y,PHW,PH,14);ctx.strokeStyle='#1A2540';ctx.lineWidth=1.5;ctx.stroke();
+      if(img){
+        ctx.save();rr(ctx,px,y,PHW,PH,14);ctx.clip();
+        const sc=Math.max(PHW/img.width,PH/img.height),dw=img.width*sc,dh=img.height*sc,dx=px+(PHW-dw)/2,dy=y+(PH-dh)/2;
+        ctx.drawImage(img,dx,dy,dw,dh);
+        // Gradient overlay for readability
+        const ov=ctx.createLinearGradient(0,y+PH-70,0,y+PH);ov.addColorStop(0,'rgba(0,0,0,0)');ov.addColorStop(1,'rgba(0,0,0,0.72)');
+        ctx.fillStyle=ov;ctx.fillRect(px,y,PHW,PH);ctx.restore();
+      } else {
+        ctx.font='400 44px "DM Sans"';ctx.fillStyle='#1A2540';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('📷',px+PHW/2,y+PH/2);ctx.textAlign='left';ctx.textBaseline='alphabetic';
+      }
+      ctx.font='700 21px "DM Sans"';ctx.fillStyle='#8A9EC0';ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.fillText(lbl,px+PHW/2,y+PH+38);ctx.textAlign='left';
+    };
+    drawSlot(prevImg,PAD,'PREVIOUS METER');
+    drawSlot(currImg,PAD+PHW+18,'CURRENT METER');
+    y=psY+PHOTO_S;
+  }
+
+  div();
+
+  // Bill rows
+  const drawRow=(label,detail,val)=>{
+    ctx.fillStyle='#0D1420';ctx.fillRect(0,y,W,ROW);
+    ctx.fillStyle='#111E32';ctx.fillRect(PAD,y+ROW-1,CW,1);
+    ctx.font='600 32px "DM Sans"';ctx.fillStyle='#EEF2FF';ctx.textBaseline='alphabetic';ctx.fillText(label,PAD,y+46);
+    ctx.font='400 22px "DM Sans"';ctx.fillStyle='#5A6E96';ctx.fillText(detail,PAD,y+78);
+    ctx.font='600 34px "Share Tech Mono"';ctx.fillStyle='#EEF2FF';ctx.textAlign='right';ctx.fillText(val,W-PAD,y+64);ctx.textAlign='left';
+    y+=ROW;
+  };
+  drawRow('Electricity',(bill.units||0).toFixed(1)+' units × ₹'+(bill.rate||0)+'/kWh',fmtINR(bill.elecBill||0));
+  drawRow('House Rent','Monthly rent',fmtINR(bill.rent||0));
+
+  // Total block
+  const tG=ctx.createLinearGradient(0,y,0,y+TOTAL);tG.addColorStop(0,'#1C1100');tG.addColorStop(1,'#0C0900');
+  ctx.fillStyle=tG;ctx.fillRect(0,y,W,TOTAL);ctx.fillStyle='rgba(245,166,35,0.18)';ctx.fillRect(0,y,W,2);
+  ctx.font='700 22px "DM Sans"';ctx.fillStyle='#C4841A';ctx.textBaseline='alphabetic';ctx.fillText('TOTAL DUE',PAD,y+72);
+  ctx.font='500 24px "DM Sans"';ctx.fillStyle='#5A6E96';ctx.fillText(bill.month||'',PAD,y+108);
+  ctx.font='800 82px "Share Tech Mono"';ctx.fillStyle='#F5A623';ctx.textAlign='right';ctx.fillText(fmtINR(bill.total),W-PAD,y+172);ctx.textAlign='left';
+  y+=TOTAL;
+
+  // Footer
+  ctx.fillStyle='#070B12';ctx.fillRect(0,y,W,FTR);ctx.fillStyle='#131E30';ctx.fillRect(0,y,W,1);
+  ctx.font='400 22px "DM Sans"';ctx.fillStyle='#2E3D5A';ctx.textBaseline='middle';ctx.fillText('Meter Billing App',PAD,y+FTR/2);
+  ctx.textAlign='right';ctx.fillText(bill.date||'',W-PAD,y+FTR/2);ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  y+=FTR;
+
+  // Bottom amber bar
+  ctx.fillStyle=amberG(0,0,W,0);ctx.fillRect(0,y,W,BAR);
+
+  return canvas;
+}
+
+async function doShare(bill){
+  E('spinner-overlay').classList.add('open');
+  try{
+    const canvas=await generateBillCanvas(bill);
+    const blob=await new Promise(res=>canvas.toBlob(res,'image/jpeg',0.92));
+    E('spinner-overlay').classList.remove('open');
+    const fname='bill-'+((bill.month||'').replace(/\s+/g,'-')||'meter')+'.jpg';
+    const file=new File([blob],fname,{type:'image/jpeg'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      try{await navigator.share({files:[file],title:'Bill — '+bill.month,text:bill.property+' • '+bill.month+'\nTotal: '+fmtINR(bill.total)});return}
+      catch(e){if(e.name==='AbortError')return}
+    }
+    // Fallback: download
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=fname;a.click();URL.revokeObjectURL(url);
+    toast('Bill image downloaded!','ok');
+  }catch(e){
+    E('spinner-overlay').classList.remove('open');console.error(e);toast('Failed to generate image','err');
+  }
+}
+
+// ── History ────────────────────────────────────────────────────
+window._hb={};
+async function loadHistory(){
+  const bills=await txAll('bills');bills.sort((a,b)=>(b.dateMs||0)-(a.dateMs||0));
+  E('hist-count').textContent=bills.length+' record'+(bills.length!==1?'s':'');
+  tog('hist-empty',bills.length>0);
+  const list=E('hist-list');list.innerHTML='';window._hb={};
+  bills.forEach(bill=>{
+    window._hb[bill.id]=bill;
+    const item=document.createElement('div');item.className='hist-item';
+    item.innerHTML=`<div class="hist-top"><div><div class="hist-month">${bill.month||'—'}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${bill.date||''}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="hist-total">${fmtINR(bill.total)}</div><div class="hist-actions"><button class="hist-btn" title="Share" onclick="shareHistBill(window._hb[${bill.id}]);event.stopPropagation()">📤</button><button class="hist-btn del" title="Delete" onclick="deleteBill(${bill.id});event.stopPropagation()">🗑</button></div></div></div><div class="hist-bottom"><div class="hist-stat"><div class="hist-stat-lbl">Units</div><div class="hist-stat-val">${(bill.units||0).toFixed(1)} kWh</div></div><div class="hist-stat"><div class="hist-stat-lbl">Electricity</div><div class="hist-stat-val">${fmtINR(bill.elecBill||0)}</div></div><div class="hist-stat"><div class="hist-stat-lbl">Rent</div><div class="hist-stat-val">${fmtINR(bill.rent||0)}</div></div>${(bill.prevPhoto||bill.photo)?'<div class="hist-stat"><div class="hist-stat-lbl">Photo</div><div style="font-size:12px">📷📷</div></div>':''}</div>`;
+    item.addEventListener('click',()=>showBillModal(bill));
+    list.appendChild(item);
+  });
+}
+function deleteBill(id){showConfirm('🗑️','Delete Bill?','This bill will be permanently deleted.','Delete',async()=>{await txDel('bills',id);loadHistory();toast('Bill deleted','err')})}
+
+function showBillModal(bill){
+  E('modal-title').textContent=bill.month;E('modal-sub').textContent=(bill.property||'')+' · '+(bill.tenant||'');
+  const hasPrev=!!bill.prevPhoto,hasCurr=!!(bill.photo||bill.currPhoto);
+  E('modal-body').innerHTML=`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:12px">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border2);display:flex;justify-content:space-between"><span style="font-size:12px;color:var(--muted)">Meter: ${(bill.prevReading||0).toFixed(1)} → ${(bill.currReading||0).toFixed(1)}</span><span style="font-family:var(--mono);font-size:12px;color:var(--success)">+${(bill.units||0).toFixed(1)} kWh</span></div>
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border2);display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--muted)">Electricity (${(bill.units||0).toFixed(1)} u × ₹${bill.rate||0})</span><span style="font-family:var(--mono);font-size:13px">${fmtINR(bill.elecBill||0)}</span></div>
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border2);display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--muted)">House Rent</span><span style="font-family:var(--mono);font-size:13px">${fmtINR(bill.rent||0)}</span></div>
+      <div style="padding:14px 16px;display:flex;justify-content:space-between;background:var(--amber-glow2)"><span style="font-weight:700">Total</span><span style="font-family:var(--mono);font-size:20px;color:var(--amber);font-weight:700">${fmtINR(bill.total)}</span></div>
+    </div>
+    ${(hasPrev||hasCurr)?`<div style="display:grid;grid-template-columns:${hasPrev&&hasCurr?'1fr 1fr':'1fr'};gap:8px;margin-bottom:12px">${hasPrev?`<div><img src="${bill.prevPhoto}" style="width:100%;border-radius:8px;max-height:110px;object-fit:cover;border:1px solid var(--border)"/><div style="font-size:9px;color:var(--muted);text-align:center;padding:4px;text-transform:uppercase;letter-spacing:1px">Previous</div></div>`:''} ${hasCurr?`<div><img src="${bill.photo||bill.currPhoto}" style="width:100%;border-radius:8px;max-height:110px;object-fit:cover;border:1px solid var(--border)"/><div style="font-size:9px;color:var(--muted);text-align:center;padding:4px;text-transform:uppercase;letter-spacing:1px">Current</div></div>`:''}</div>`:''}
+    <button class="btn btn-primary" onclick="shareHistBill(window._hb[${bill.id}]);closeModal()"><span>📤</span> Share Bill Image</button>`;
+  E('modal-overlay').classList.add('open');
+}
+function closeModal(e){if(!e||e.target===E('modal-overlay'))E('modal-overlay').classList.remove('open')}
+
+// ── Settings ───────────────────────────────────────────────────
+function populateSettings(){
+  E('s-property').value=cfg.property;E('s-tenant').value=cfg.tenant;
+  E('s-rate').value=cfg.rate;E('s-rent').value=cfg.rent;E('s-last-reading').value=cfg.lastReading;
+  const M=['January','February','March','April','May','June','July','August','September','October','November','December'],n=new Date();
+  E('s-month').value=cfg.billingMonth||M[n.getMonth()];
+  const ys=E('s-year');ys.innerHTML='';
+  for(let y=n.getFullYear()-1;y<=n.getFullYear()+2;y++){const o=document.createElement('option');o.value=o.textContent=y;ys.appendChild(o)}
+  ys.value=cfg.billingYear||String(n.getFullYear());
+}
+async function saveSettings(){
+  cfg.property=E('s-property').value||'My Property';cfg.tenant=E('s-tenant').value||'Tenant';
+  cfg.rate=E('s-rate').value||'6.5';cfg.rent=E('s-rent').value||'5700';
+  cfg.lastReading=E('s-last-reading').value;cfg.billingMonth=E('s-month').value;cfg.billingYear=E('s-year').value;
+  await txPut('settings',cfg);
+  E('hdr-prop').textContent=cfg.property;E('hdr-month').textContent=displayMonth();
+  E('prev-val').textContent=cfg.lastReading?parseFloat(cfg.lastReading).toFixed(1):'—';
+  const btn=E('save-settings-btn');btn.className='btn btn-success mb16';btn.textContent='✓ Saved!';
+  setTimeout(()=>{btn.className='btn btn-primary mb16';btn.textContent='Save Settings'},2200);
+  toast('Settings saved','ok');
+}
+
+// ── Compression helpers ────────────────────────────────────────
+async function gzipCompress(str){
+  const bytes=new TextEncoder().encode(str);
+  const cs=new CompressionStream('gzip');
+  const writer=cs.writable.getWriter();
+  writer.write(bytes);writer.close();
+  const chunks=[];
+  const reader=cs.readable.getReader();
+  for(;;){const{done,value}=await reader.read();if(done)break;chunks.push(value)}
+  const total=chunks.reduce((s,c)=>s+c.length,0),out=new Uint8Array(total);
+  let offset=0;chunks.forEach(c=>{out.set(c,offset);offset+=c.length});
+  return out;
+}
+async function gzipDecompress(buffer){
+  const ds=new DecompressionStream('gzip');
+  const writer=ds.writable.getWriter();
+  writer.write(buffer instanceof Uint8Array?buffer:new Uint8Array(buffer));
+  writer.close();
+  return new Response(ds.readable).text();
+}
+
+// ── Export / Import ────────────────────────────────────────────
+async function exportData(){
+  const bills=await txAll('bills');
+  const payload={exportedAt:new Date().toISOString(),appVersion:3,settings:cfg,bills};
+  const compressed=await gzipCompress(JSON.stringify(payload));
+  const blob=new Blob([compressed],{type:'application/octet-stream'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  const fname='meter-billing-'+new Date().toISOString().slice(0,10)+'.mbz';
+  a.href=url;a.download=fname;a.click();URL.revokeObjectURL(url);
+  const ratio=Math.round((1-compressed.length/(JSON.stringify(payload).length))*100);
+  toast('✓ Exported! (~'+ratio+'% smaller than JSON)','ok');
+}
+async function importData(e){
+  const file=e.target.files[0];if(!file)return;
+  try{
+    let data;
+    // Detect: .mbz (gzip magic bytes FF 1F 8B) or plain JSON
+    const header=new Uint8Array(await file.slice(0,2).arrayBuffer());
+    if(header[0]===0x1f&&header[1]===0x8b){
+      // Gzip compressed .mbz
+      const buf=await file.arrayBuffer();
+      data=JSON.parse(await gzipDecompress(buf));
+    } else {
+      // Legacy plain JSON
+      data=JSON.parse(await file.text());
+    }
+    if(!data.settings||!Array.isArray(data.bills))throw 0;
+    showConfirm('⬇️','Import Backup?','Replace all current data with '+data.bills.length+' bills from backup ('+((data.exportedAt||'').slice(0,10))+')?','Import',async()=>{
+      await txClr('settings');await txClr('bills');
+      cfg={...cfg,...data.settings,id:'config'};await txPut('settings',cfg);
+      for(const b of data.bills){const{id,...r}=b;await txPut('bills',r)}
+      E('hdr-prop').textContent=cfg.property;E('hdr-month').textContent=displayMonth();
+      E('prev-val').textContent=cfg.lastReading?parseFloat(cfg.lastReading).toFixed(1):'—';
+      toast('✓ '+data.bills.length+' bills imported!','ok');
+    });
+  }catch(err){console.error(err);toast('❌ Invalid or corrupt backup file','err')}
+  e.target.value='';
+}
+
+// ── Init ───────────────────────────────────────────────────────
+async function init(){
+  await openDB();
+  const stored=await txGet('settings','config');
+  if(stored)cfg={...cfg,...stored};
+  E('hdr-prop').textContent=cfg.property;E('hdr-month').textContent=displayMonth();
+  E('prev-val').textContent=cfg.lastReading?parseFloat(cfg.lastReading).toFixed(1):'—';
+  // Auto-load last bill's current photo as this month's prev photo
+  try{
+    const bills=await txAll('bills');
+    if(bills.length){
+      bills.sort((a,b)=>(b.dateMs||0)-(a.dateMs||0));
+      const last=bills[0];
+      if(last.photo&&!photos.prev){photos.prev=last.photo;setPhotoUI('prev',last.photo)}
+    }
+  }catch{}
+  E('screen-reading').classList.add('active');E('nav-reading').classList.add('active');
+}
+init().catch(e=>{console.error(e);toast('DB error','err')});
+</script>
+</body>
+</html>
