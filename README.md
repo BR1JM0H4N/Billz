@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="Icon.svg" width="100" height="100" alt="Billz Icon"/>
+<img src="icon.svg" width="100" height="100" alt="Billz Icon"/>
 
 # ⚡ Billz
 
