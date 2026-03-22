@@ -1,5 +1,5 @@
 // ── Billz Service Worker ───────────────────────────────────────
-const CACHE = 'billz-v2.1';
+const CACHE = 'billz-v2.2';
 
 // Assets to pre-cache on install
 const PRECACHE = [
