@@ -1076,7 +1076,7 @@ function showBillModal(bill){
       <div style="padding:14px 16px;display:flex;justify-content:space-between;background:var(--amber-glow2)"><span style="font-weight:700">Total</span><span style="font-family:var(--mono);font-size:20px;color:var(--amber);font-weight:700">${fmtINR(bill.total)}</span></div>
     </div>
     ${(hasPrev||hasCurr)?`<div style="display:grid;grid-template-columns:${hasPrev&&hasCurr?'1fr 1fr':'1fr'};gap:8px;margin-bottom:12px">${hasPrev?`<div><img src="${bill.prevPhoto}" style="width:100%;border-radius:8px;max-height:110px;object-fit:contain;background:#0A0E18;border:1px solid var(--border)"/><div style="font-size:9px;color:var(--muted);text-align:center;padding:4px;text-transform:uppercase;letter-spacing:1px">Previous</div></div>`:''} ${hasCurr?`<div><img src="${bill.photo||bill.currPhoto}" style="width:100%;border-radius:8px;max-height:110px;object-fit:contain;background:#0A0E18;border:1px solid var(--border)"/><div style="font-size:9px;color:var(--muted);text-align:center;padding:4px;text-transform:uppercase;letter-spacing:1px">Current</div></div>`:''}</div>`:''}
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:0">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0">
       <button class="btn btn-secondary btn-sm" onclick="shareHistBill(window._hb[${bill.id}]);closeModal()"><span>📤</span> Share</button>
       <button class="btn btn-secondary btn-sm" onclick="printHistBill(window._hb[${bill.id}]);closeModal()"><span>🖨️</span> Print</button>
     </div>`;
