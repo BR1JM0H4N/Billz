@@ -1029,7 +1029,7 @@ async function doShare(bill){
     const fname='bill-'+((bill.month||'').replace(/\s+/g,'-')||'meter')+'.jpg';
     const file=new File([blob],fname,{type:'image/jpeg'});
     if(navigator.canShare&&navigator.canShare({files:[file]})){
-      try{await navigator.share({files:[file],title:'Bill — '+bill.month,text:'Bill — '+bill.property+' Of '+bill.month+'\nTotal: '+fmtINR(bill.total)});return}
+      try{await navigator.share({files:[file],title:'Bill — '+bill.month,text:bill.property+'–Bill for '+bill.month+'\nTotal: '+fmtINR(bill.total)});return}
       catch(e){if(e.name==='AbortError')return}
     }
     const url=URL.createObjectURL(blob),a=document.createElement('a');
