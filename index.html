@@ -172,7 +172,7 @@ select option{background:var(--card)}
 .print-arrow-sym{font-size:18px;color:var(--amber)}
 .print-photos-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 20px;background:#070C16;border-bottom:1px solid var(--border)}
 .print-photo-slot{border-radius:8px;overflow:hidden;border:1px solid var(--border2)}
-.print-photo-slot img{width:100%;height:90px;object-fit:cover;display:block}
+.print-photo-slot img{width:100%;height:180px;object-fit:contain;display:block;background:#0A0E18}
 .print-photo-cap{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;text-align:center;padding:5px;background:#080C16}
 .print-bill-row{padding:12px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border2)}
 .print-bill-name{font-size:13px;font-weight:600}
@@ -195,6 +195,15 @@ select option{background:var(--card)}
 .hist-btn{background:none;border:1px solid var(--border);border-radius:7px;cursor:pointer;color:var(--muted);font-size:13px;padding:5px 7px;transition:all .15s;font-family:var(--sans);line-height:1}
 .hist-btn:hover{color:var(--amber);border-color:var(--amber-dim)}
 .hist-btn.del:hover{color:var(--danger);border-color:rgba(255,95,109,0.4)}
+
+/* Theme toggle */
+.theme-toggle-row{display:flex;align-items:center;justify-content:space-between}
+.theme-toggle-lbl{font-size:13px;font-weight:600}
+.theme-toggle-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.toggle-pill{width:48px;height:26px;border-radius:13px;background:var(--border);border:none;cursor:pointer;position:relative;transition:background .25s;flex-shrink:0}
+.toggle-pill::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .25s;box-shadow:0 1px 4px rgba(0,0,0,0.3)}
+.toggle-pill.on{background:var(--amber)}
+.toggle-pill.on::after{transform:translateX(22px)}
 .hist-bottom{display:flex;gap:12px}
 .hist-stat{flex:1}
 .hist-stat-lbl{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px}
@@ -289,6 +298,7 @@ select.field-inp{cursor:pointer}
   .print-footer{background:#f8f9fa!important}
   .print-footer span{color:#999!important}
   .print-photos-row{background:#f0f0f0!important}
+  .print-photo-slot img{background:#e8e8e8!important}
   .print-photo-cap{background:#e0e0e0!important;color:#666!important}
 }
 </style>
@@ -446,8 +456,8 @@ select.field-inp{cursor:pointer}
 
       <!-- Action buttons -->
       <div class="btn-grid no-print">
+        <button class="btn btn-secondary btn-sm" onclick="shareCurrentBill()">🖼 Share Image</button>
         <button class="btn btn-secondary btn-sm" onclick="printBill()">🖨️ Print / PDF</button>
-        <button class="btn btn-secondary btn-sm" onclick="shareCurrentBill()">📤 Share Image</button>
       </div>
       <button class="btn btn-primary mb12 no-print" id="save-btn" onclick="saveBill()"><span>💾</span> Save & Update Reading</button>
       <div id="save-ok" class="hide" style="text-align:center;font-size:12px;color:var(--success);padding-bottom:8px;animation:fadeUp .3s ease">✓ Saved. Reading updated for next month.</div>
@@ -497,6 +507,18 @@ select.field-inp{cursor:pointer}
       </div>
     </div>
     <button class="btn btn-primary mb16" id="save-settings-btn" onclick="saveSettings()">Save Settings</button>
+    <div class="settings-section">
+      <div class="settings-sec-title">Bill Appearance</div>
+      <div class="settings-card">
+        <div class="theme-toggle-row">
+          <div>
+            <div class="theme-toggle-lbl">Light Theme Bill</div>
+            <div class="theme-toggle-sub">Better for printing & WhatsApp readability</div>
+          </div>
+          <button class="toggle-pill" id="theme-toggle" onclick="toggleBillTheme()"></button>
+        </div>
+      </div>
+    </div>
     <div class="settings-section">
       <div class="settings-sec-title">Data Backup</div>
       <div class="export-box">
@@ -588,7 +610,7 @@ const txAll=(s)=>new Promise((r,j)=>{const q=db.transaction(s,'readonly').object
 const txClr=(s)=>new Promise((r,j)=>{const q=db.transaction(s,'readwrite').objectStore(s).clear();q.onsuccess=()=>r();q.onerror=e=>j(e)});
 
 // ── State ──────────────────────────────────────────────────────
-let cfg={id:'config',property:'My Property',tenant:'Tenant',rate:'6.5',rent:'5700',lastReading:'',billingMonth:'',billingYear:''};
+let cfg={id:'config',property:'My Property',tenant:'Tenant',rate:'6.5',rent:'5700',lastReading:'',billingMonth:'',billingYear:'',billTheme:'dark'};
 let photos={prev:null,curr:null};
 let billSaved=false;
 
@@ -802,128 +824,163 @@ async function shareHistBill(bill){await doShare(bill)}
 function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath()}
 function loadImg(src){return new Promise(res=>{if(!src)return res(null);const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src})}
 
-async function generateBillCanvas(bill){
+async function generateBillCanvas(bill, theme){
   await document.fonts.ready;
+  const dark = (theme||cfg.billTheme||'dark')==='dark';
+
+  // ── Theme palettes ───────────────────────────────────────────
+  const T = dark ? {
+    bg:'#05080F', hdrA:'#101F42', hdrB:'#07101E',
+    badgeFill:'rgba(245,166,35,0.14)', badgeStroke:'rgba(245,166,35,0.38)',
+    propColor:'#EEF2FF', tenantColor:'#6B7FA3',
+    meterBg:'#080C16', meterBg2:'#050810',
+    sectionLbl:'#F5A623',
+    digitLitBg:'#10192E', digitLitBorder:'#C4841A', digitLitColor:'#F5A623',
+    digitDimBg:'#0A0E18', digitDimBorder:'#1C2840', digitDimColor:'#4A5E80',
+    digitDecBg:'#1A0A00', digitDecBorder:'#6B3A00', digitDecColor:'#F0A500',
+    digitDotColor:'#2E3D5A',
+    unitsTxt:'#22D3A5', arrowColor:'#F5A623',
+    divColor:'rgba(245,166,35,0.25)',
+    photoBg:'#060A10', photoSlotBg:'#0A0E1A', photoSlotBorder:'#1A2540',
+    photoLblColor:'#8A9EC0', photoSectionLbl:'#F5A623',
+    rowBg:'#0D1420', rowDiv:'#111E32', rowLabelColor:'#EEF2FF', rowDetailColor:'#5A6E96', rowValColor:'#EEF2FF',
+    totalA:'#1C1100', totalB:'#0C0900', totalTopLine:'rgba(245,166,35,0.18)',
+    totalLbl:'#C4841A', totalMonth:'#5A6E96', totalVal:'#F5A623',
+    ftrBg:'#070B12', ftrDiv:'#131E30', ftrColor:'#2E3D5A',
+    amberA:'#F5A623', amberB:'#C4841A',
+  } : {
+    bg:'#FFFFFF', hdrA:'#EEF3FF', hdrB:'#F8FAFF',
+    badgeFill:'rgba(180,120,0,0.08)', badgeStroke:'rgba(180,120,0,0.3)',
+    propColor:'#111827', tenantColor:'#6B7FA3',
+    meterBg:'#F2F5FB', meterBg2:'#EEF2FA',
+    sectionLbl:'#B87000',
+    digitLitBg:'#FFF8E8', digitLitBorder:'#D4920A', digitLitColor:'#A06800',
+    digitDimBg:'#EEF2FF', digitDimBorder:'#C8D4EC', digitDimColor:'#7A90B8',
+    digitDecBg:'#FFF4D6', digitDecBorder:'#E8A830', digitDecColor:'#9A6800',
+    digitDotColor:'#B0BDD8',
+    unitsTxt:'#1A9E7A', arrowColor:'#C4841A',
+    divColor:'rgba(180,120,0,0.18)',
+    photoBg:'#F2F5FB', photoSlotBg:'#E8EDF8', photoSlotBorder:'#C8D4EC',
+    photoLblColor:'#6B7FA3', photoSectionLbl:'#B87000',
+    rowBg:'#FFFFFF', rowDiv:'#E8EEF8', rowLabelColor:'#111827', rowDetailColor:'#6B7FA3', rowValColor:'#111827',
+    totalA:'#FFF8E0', totalB:'#FFF3CC', totalTopLine:'rgba(180,120,0,0.25)',
+    totalLbl:'#9A6800', totalMonth:'#6B7FA3', totalVal:'#B87000',
+    ftrBg:'#F8FAFF', ftrDiv:'#E2E8F4', ftrColor:'#9AAAC8',
+    amberA:'#D4920A', amberB:'#B87000',
+  };
+
   const W=1080,PAD=68,CW=W-PAD*2;
   const prevImg=await loadImg(bill.prevPhoto);
   const currImg=await loadImg(bill.photo||bill.currPhoto);
   const hasPhotos=!!(prevImg||currImg);
 
-  // Section heights
-  const BAR=14,HDR=460,DIV=2,METER=300,PHOTO_S=hasPhotos?480:0,ROW=112,TOTAL=230,FTR=100;
+  const BAR=14,HDR=460,DIV=2,METER=300,PHOTO_S=hasPhotos?560:0,ROW=112,TOTAL=230,FTR=100;
   const H=BAR+HDR+DIV+METER+(hasPhotos?DIV+PHOTO_S:0)+DIV+ROW*2+TOTAL+FTR+BAR;
 
   const canvas=document.createElement('canvas');
   canvas.width=W;canvas.height=H;
   const ctx=canvas.getContext('2d');
 
-  // Background
-  ctx.fillStyle='#05080F';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=T.bg;ctx.fillRect(0,0,W,H);
 
-  const amberG=(x1,y1,x2,y2)=>{const g=ctx.createLinearGradient(x1,y1,x2,y2);g.addColorStop(0,'#F5A623');g.addColorStop(1,'#C4841A');return g};
+  const amberG=(x1,y1,x2,y2)=>{const g=ctx.createLinearGradient(x1,y1,x2,y2);g.addColorStop(0,T.amberA);g.addColorStop(1,T.amberB);return g};
 
   let y=0;
 
-  // Top amber bar
+  // Top bar
   ctx.fillStyle=amberG(0,0,W,0);ctx.fillRect(0,y,W,BAR);y+=BAR;
 
   // Header
   const hY=y;
-  const hG=ctx.createLinearGradient(0,y,0,y+HDR);hG.addColorStop(0,'#101F42');hG.addColorStop(1,'#07101E');
+  const hG=ctx.createLinearGradient(0,y,0,y+HDR);hG.addColorStop(0,T.hdrA);hG.addColorStop(1,T.hdrB);
   ctx.fillStyle=hG;ctx.fillRect(0,y,W,HDR);
-  // Decorative glow circles
-  [170,100].forEach((r,i)=>{ctx.beginPath();ctx.arc(W-70,hY+80,r,0,Math.PI*2);ctx.fillStyle=`rgba(245,166,35,${0.04+i*0.03})`;ctx.fill()});
+  [170,100].forEach((r,i)=>{ctx.beginPath();ctx.arc(W-70,hY+80,r,0,Math.PI*2);ctx.fillStyle=`rgba(245,166,35,${dark?0.04+i*0.03:0.03+i*0.02})`;ctx.fill()});
 
-  // Badge pill
   y+=76;
   ctx.font='700 22px "DM Sans"';const BADGE='ELECTRICITY + RENT BILL';const bw=ctx.measureText(BADGE).width+44;
-  rr(ctx,PAD,y-28,bw,40,20);ctx.fillStyle='rgba(245,166,35,0.14)';ctx.fill();
-  rr(ctx,PAD,y-28,bw,40,20);ctx.strokeStyle='rgba(245,166,35,0.38)';ctx.lineWidth=1;ctx.stroke();
-  ctx.fillStyle='#F5A623';ctx.textBaseline='middle';ctx.fillText(BADGE,PAD+22,y-8);
+  rr(ctx,PAD,y-28,bw,40,20);ctx.fillStyle=T.badgeFill;ctx.fill();
+  rr(ctx,PAD,y-28,bw,40,20);ctx.strokeStyle=T.badgeStroke;ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle=T.amberA;ctx.textBaseline='middle';ctx.fillText(BADGE,PAD+22,y-8);
 
-  // Property
-  y+=90;ctx.font='800 68px "DM Sans"';ctx.fillStyle='#EEF2FF';ctx.textBaseline='alphabetic';
+  y+=90;ctx.font='800 68px "DM Sans"';ctx.fillStyle=T.propColor;ctx.textBaseline='alphabetic';
   let pt=bill.property||'My Property';
   while(ctx.measureText(pt).width>CW-40&&pt.length>3)pt=pt.slice(0,-1);
   ctx.fillText(pt,PAD,y);
 
-  // Tenant
-  y+=54;ctx.font='500 30px "DM Sans"';ctx.fillStyle='#6B7FA3';
+  y+=54;ctx.font='500 30px "DM Sans"';ctx.fillStyle=T.tenantColor;
   ctx.fillText('Tenant: '+(bill.tenant||'Tenant'),PAD,y);
 
-  // Month/date top-right
-  ctx.font='700 28px "DM Sans"';ctx.fillStyle='#F5A623';ctx.textAlign='right';ctx.fillText(bill.month||'',W-PAD,hY+94);
-  ctx.font='400 22px "DM Sans"';ctx.fillStyle='#5A6E96';ctx.fillText(bill.date||'',W-PAD,hY+132);
+  ctx.font='700 28px "DM Sans"';ctx.fillStyle=T.amberA;ctx.textAlign='right';ctx.fillText(bill.month||'',W-PAD,hY+94);
+  ctx.font='400 22px "DM Sans"';ctx.fillStyle=T.tenantColor;ctx.fillText(bill.date||'',W-PAD,hY+132);
   ctx.textAlign='left';
 
   y=hY+HDR;
 
-  // Divider
-  const div=(col='rgba(245,166,35,0.25)')=>{ctx.fillStyle=col;ctx.fillRect(0,y,W,DIV);y+=DIV};
+  const div=(col)=>{ctx.fillStyle=col||T.divColor;ctx.fillRect(0,y,W,DIV);y+=DIV};
   div();
 
   // Meter section
-  const mY=y;const mG=ctx.createLinearGradient(0,y,0,y+METER);mG.addColorStop(0,'#080C16');mG.addColorStop(1,'#050810');
+  const mY=y;const mG=ctx.createLinearGradient(0,y,0,y+METER);mG.addColorStop(0,T.meterBg);mG.addColorStop(1,T.meterBg2);
   ctx.fillStyle=mG;ctx.fillRect(0,y,W,METER);
 
-  y+=56;ctx.font='700 21px "DM Sans"';ctx.fillStyle='#F5A623';ctx.fillText('METER READING',PAD,y);
+  y+=56;ctx.font='700 21px "DM Sans"';ctx.fillStyle=T.sectionLbl;ctx.fillText('METER READING',PAD,y);
   y+=58;
 
-  // Draw digit boxes
   const BW=58,BH=76,BR=8,BG=7;
   const drawDigits=(reading,sx,muted)=>{
     const[wh,dc]=String(parseFloat(reading).toFixed(1)).split('.');
     const digs=wh.padStart(4,'0').split('');let bx=sx;
     digs.forEach(d=>{
-      rr(ctx,bx,y,BW,BH,BR);ctx.fillStyle=muted?'#0A0E18':'#10192E';ctx.fill();
-      rr(ctx,bx,y,BW,BH,BR);ctx.strokeStyle=muted?'#1C2840':'#C4841A';ctx.lineWidth=1.5;ctx.stroke();
-      ctx.font='400 42px "Share Tech Mono"';ctx.fillStyle=muted?'#4A5E80':'#F5A623';
+      rr(ctx,bx,y,BW,BH,BR);ctx.fillStyle=muted?T.digitDimBg:T.digitLitBg;ctx.fill();
+      rr(ctx,bx,y,BW,BH,BR);ctx.strokeStyle=muted?T.digitDimBorder:T.digitLitBorder;ctx.lineWidth=1.5;ctx.stroke();
+      ctx.font='400 42px "Share Tech Mono"';ctx.fillStyle=muted?T.digitDimColor:T.digitLitColor;
       ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(d,bx+BW/2,y+BH/2);
       ctx.textAlign='left';ctx.textBaseline='alphabetic';bx+=BW+BG;
     });
-    ctx.font='400 32px "Share Tech Mono"';ctx.fillStyle='#2E3D5A';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('.',bx+10,y+BH/2);ctx.textAlign='left';ctx.textBaseline='alphabetic';bx+=26;
-    rr(ctx,bx,y,BW,BH,BR);ctx.fillStyle='#1A0A00';ctx.fill();rr(ctx,bx,y,BW,BH,BR);ctx.strokeStyle='#6B3A00';ctx.lineWidth=1.5;ctx.stroke();
-    ctx.font='400 42px "Share Tech Mono"';ctx.fillStyle='#F0A500';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(dc||'0',bx+BW/2,y+BH/2);ctx.textAlign='left';ctx.textBaseline='alphabetic';
+    ctx.font='400 32px "Share Tech Mono"';ctx.fillStyle=T.digitDotColor;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('.',bx+10,y+BH/2);ctx.textAlign='left';ctx.textBaseline='alphabetic';bx+=26;
+    rr(ctx,bx,y,BW,BH,BR);ctx.fillStyle=T.digitDecBg;ctx.fill();rr(ctx,bx,y,BW,BH,BR);ctx.strokeStyle=T.digitDecBorder;ctx.lineWidth=1.5;ctx.stroke();
+    ctx.font='400 42px "Share Tech Mono"';ctx.fillStyle=T.digitDecColor;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(dc||'0',bx+BW/2,y+BH/2);ctx.textAlign='left';ctx.textBaseline='alphabetic';
     return bx+BW;
   };
 
-  // 4*(58+7)-7 + 26 + 58 = 325 per side
   const RW=325,AW=80,TRW=RW*2+AW,rsx=Math.round((W-TRW)/2);
-
-  // Side labels
-  ctx.font='600 20px "DM Sans"';ctx.fillStyle='#4A5E80';
+  ctx.font='600 20px "DM Sans"';ctx.fillStyle=T.digitDimColor;
   ctx.fillText('PREVIOUS',rsx,y-12);ctx.textAlign='right';ctx.fillText('CURRENT',rsx+TRW,y-12);ctx.textAlign='left';
 
   drawDigits(bill.prevReading,rsx,true);
-  ctx.font='700 44px "DM Sans"';ctx.fillStyle='#F5A623';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('→',rsx+RW+AW/2,y+BH/2);ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  ctx.font='700 44px "DM Sans"';ctx.fillStyle=T.arrowColor;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('→',rsx+RW+AW/2,y+BH/2);ctx.textAlign='left';ctx.textBaseline='alphabetic';
   drawDigits(bill.currReading,rsx+RW+AW,false);
 
-  y+=BH+28;ctx.font='600 25px "DM Sans"';ctx.fillStyle='#22D3A5';ctx.textAlign='center';ctx.textBaseline='alphabetic';
+  y+=BH+28;ctx.font='600 25px "DM Sans"';ctx.fillStyle=T.unitsTxt;ctx.textAlign='center';ctx.textBaseline='alphabetic';
   ctx.fillText('▲ '+(bill.units||0).toFixed(1)+' kWh consumed this period',W/2,y);ctx.textAlign='left';
 
   y=mY+METER;
 
-  // Photos section
+  // Photos section — CONTAIN (no cropping)
   if(hasPhotos){
     div('rgba(245,166,35,0.2)');
-    const psY=y;ctx.fillStyle='#060A10';ctx.fillRect(0,y,W,PHOTO_S);
-    y+=50;ctx.font='700 21px "DM Sans"';ctx.fillStyle='#F5A623';ctx.fillText('METER PROOF',PAD,y);
+    const psY=y;ctx.fillStyle=T.photoBg;ctx.fillRect(0,y,W,PHOTO_S);
+    y+=50;ctx.font='700 21px "DM Sans"';ctx.fillStyle=T.photoSectionLbl;ctx.fillText('METER PROOF',PAD,y);
     y+=46;
-    const PH=PHOTO_S-50-46-50,PHW=(CW-18)/2;
+    const PH=PHOTO_S-50-46-64,PHW=(CW-18)/2;
 
     const drawSlot=(img,px,lbl)=>{
-      rr(ctx,px,y,PHW,PH,14);ctx.fillStyle='#0A0E1A';ctx.fill();rr(ctx,px,y,PHW,PH,14);ctx.strokeStyle='#1A2540';ctx.lineWidth=1.5;ctx.stroke();
+      rr(ctx,px,y,PHW,PH,14);ctx.fillStyle=T.photoSlotBg;ctx.fill();
+      rr(ctx,px,y,PHW,PH,14);ctx.strokeStyle=T.photoSlotBorder;ctx.lineWidth=1.5;ctx.stroke();
       if(img){
         ctx.save();rr(ctx,px,y,PHW,PH,14);ctx.clip();
-        const sc=Math.max(PHW/img.width,PH/img.height),dw=img.width*sc,dh=img.height*sc,dx=px+(PHW-dw)/2,dy=y+(PH-dh)/2;
+        // ── CONTAIN: scale to fit entirely, no cropping ──────────
+        const sc=Math.min(PHW/img.width,PH/img.height);
+        const dw=img.width*sc,dh=img.height*sc;
+        const dx=px+(PHW-dw)/2,dy=y+(PH-dh)/2;
         ctx.drawImage(img,dx,dy,dw,dh);
-        // Gradient overlay for readability
-        const ov=ctx.createLinearGradient(0,y+PH-70,0,y+PH);ov.addColorStop(0,'rgba(0,0,0,0)');ov.addColorStop(1,'rgba(0,0,0,0.72)');
-        ctx.fillStyle=ov;ctx.fillRect(px,y,PHW,PH);ctx.restore();
+        ctx.restore();
+        // Subtle inner border frame
+        rr(ctx,px,y,PHW,PH,14);ctx.strokeStyle=T.photoSlotBorder;ctx.lineWidth=1;ctx.stroke();
       } else {
-        ctx.font='400 44px "DM Sans"';ctx.fillStyle='#1A2540';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('📷',px+PHW/2,y+PH/2);ctx.textAlign='left';ctx.textBaseline='alphabetic';
+        ctx.font='400 44px "DM Sans"';ctx.fillStyle=T.photoSlotBorder;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('📷',px+PHW/2,y+PH/2);ctx.textAlign='left';ctx.textBaseline='alphabetic';
       }
-      ctx.font='700 21px "DM Sans"';ctx.fillStyle='#8A9EC0';ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.fillText(lbl,px+PHW/2,y+PH+38);ctx.textAlign='left';
+      ctx.font='700 21px "DM Sans"';ctx.fillStyle=T.photoLblColor;ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.fillText(lbl,px+PHW/2,y+PH+38);ctx.textAlign='left';
     };
     drawSlot(prevImg,PAD,'PREVIOUS METER');
     drawSlot(currImg,PAD+PHW+18,'CURRENT METER');
@@ -934,31 +991,30 @@ async function generateBillCanvas(bill){
 
   // Bill rows
   const drawRow=(label,detail,val)=>{
-    ctx.fillStyle='#0D1420';ctx.fillRect(0,y,W,ROW);
-    ctx.fillStyle='#111E32';ctx.fillRect(PAD,y+ROW-1,CW,1);
-    ctx.font='600 32px "DM Sans"';ctx.fillStyle='#EEF2FF';ctx.textBaseline='alphabetic';ctx.fillText(label,PAD,y+46);
-    ctx.font='400 22px "DM Sans"';ctx.fillStyle='#5A6E96';ctx.fillText(detail,PAD,y+78);
-    ctx.font='600 34px "Share Tech Mono"';ctx.fillStyle='#EEF2FF';ctx.textAlign='right';ctx.fillText(val,W-PAD,y+64);ctx.textAlign='left';
+    ctx.fillStyle=T.rowBg;ctx.fillRect(0,y,W,ROW);
+    ctx.fillStyle=T.rowDiv;ctx.fillRect(PAD,y+ROW-1,CW,1);
+    ctx.font='600 32px "DM Sans"';ctx.fillStyle=T.rowLabelColor;ctx.textBaseline='alphabetic';ctx.fillText(label,PAD,y+46);
+    ctx.font='400 22px "DM Sans"';ctx.fillStyle=T.rowDetailColor;ctx.fillText(detail,PAD,y+78);
+    ctx.font='600 34px "Share Tech Mono"';ctx.fillStyle=T.rowValColor;ctx.textAlign='right';ctx.fillText(val,W-PAD,y+64);ctx.textAlign='left';
     y+=ROW;
   };
   drawRow('Electricity',(bill.units||0).toFixed(1)+' units × ₹'+(bill.rate||0)+'/kWh',fmtINR(bill.elecBill||0));
   drawRow('House Rent','Monthly rent',fmtINR(bill.rent||0));
 
-  // Total block
-  const tG=ctx.createLinearGradient(0,y,0,y+TOTAL);tG.addColorStop(0,'#1C1100');tG.addColorStop(1,'#0C0900');
-  ctx.fillStyle=tG;ctx.fillRect(0,y,W,TOTAL);ctx.fillStyle='rgba(245,166,35,0.18)';ctx.fillRect(0,y,W,2);
-  ctx.font='700 22px "DM Sans"';ctx.fillStyle='#C4841A';ctx.textBaseline='alphabetic';ctx.fillText('TOTAL DUE',PAD,y+72);
-  ctx.font='500 24px "DM Sans"';ctx.fillStyle='#5A6E96';ctx.fillText(bill.month||'',PAD,y+108);
-  ctx.font='800 82px "Share Tech Mono"';ctx.fillStyle='#F5A623';ctx.textAlign='right';ctx.fillText(fmtINR(bill.total),W-PAD,y+172);ctx.textAlign='left';
+  // Total
+  const tG=ctx.createLinearGradient(0,y,0,y+TOTAL);tG.addColorStop(0,T.totalA);tG.addColorStop(1,T.totalB);
+  ctx.fillStyle=tG;ctx.fillRect(0,y,W,TOTAL);ctx.fillStyle=T.totalTopLine;ctx.fillRect(0,y,W,2);
+  ctx.font='700 22px "DM Sans"';ctx.fillStyle=T.totalLbl;ctx.textBaseline='alphabetic';ctx.fillText('TOTAL DUE',PAD,y+72);
+  ctx.font='500 24px "DM Sans"';ctx.fillStyle=T.totalMonth;ctx.fillText(bill.month||'',PAD,y+108);
+  ctx.font='800 82px "Share Tech Mono"';ctx.fillStyle=T.totalVal;ctx.textAlign='right';ctx.fillText(fmtINR(bill.total),W-PAD,y+172);ctx.textAlign='left';
   y+=TOTAL;
 
   // Footer
-  ctx.fillStyle='#070B12';ctx.fillRect(0,y,W,FTR);ctx.fillStyle='#131E30';ctx.fillRect(0,y,W,1);
-  ctx.font='400 22px "DM Sans"';ctx.fillStyle='#2E3D5A';ctx.textBaseline='middle';ctx.fillText('Meter Billing App',PAD,y+FTR/2);
+  ctx.fillStyle=T.ftrBg;ctx.fillRect(0,y,W,FTR);ctx.fillStyle=T.ftrDiv;ctx.fillRect(0,y,W,1);
+  ctx.font='400 22px "DM Sans"';ctx.fillStyle=T.ftrColor;ctx.textBaseline='middle';ctx.fillText('Meter Billing App',PAD,y+FTR/2);
   ctx.textAlign='right';ctx.fillText(bill.date||'',W-PAD,y+FTR/2);ctx.textAlign='left';ctx.textBaseline='alphabetic';
   y+=FTR;
 
-  // Bottom amber bar
   ctx.fillStyle=amberG(0,0,W,0);ctx.fillRect(0,y,W,BAR);
 
   return canvas;
@@ -976,13 +1032,20 @@ async function doShare(bill){
       try{await navigator.share({files:[file],title:'Bill — '+bill.month,text:bill.property+' • '+bill.month+'\nTotal: '+fmtINR(bill.total)});return}
       catch(e){if(e.name==='AbortError')return}
     }
-    // Fallback: download
     const url=URL.createObjectURL(blob),a=document.createElement('a');
     a.href=url;a.download=fname;a.click();URL.revokeObjectURL(url);
     toast('Bill image downloaded!','ok');
   }catch(e){
     E('spinner-overlay').classList.remove('open');console.error(e);toast('Failed to generate image','err');
   }
+}
+
+// ── Theme toggle ───────────────────────────────────────────────
+function toggleBillTheme(){
+  cfg.billTheme=cfg.billTheme==='light'?'dark':'light';
+  txPut('settings',cfg);
+  E('theme-toggle').classList.toggle('on',cfg.billTheme==='light');
+  toast(cfg.billTheme==='light'?'Light theme bill':'Dark theme bill','ok');
 }
 
 // ── History ────────────────────────────────────────────────────
@@ -995,7 +1058,7 @@ async function loadHistory(){
   bills.forEach(bill=>{
     window._hb[bill.id]=bill;
     const item=document.createElement('div');item.className='hist-item';
-    item.innerHTML=`<div class="hist-top"><div><div class="hist-month">${bill.month||'—'}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${bill.date||''}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="hist-total">${fmtINR(bill.total)}</div><div class="hist-actions"><button class="hist-btn" title="Share" onclick="shareHistBill(window._hb[${bill.id}]);event.stopPropagation()">📤</button><button class="hist-btn del" title="Delete" onclick="deleteBill(${bill.id});event.stopPropagation()">🗑</button></div></div></div><div class="hist-bottom"><div class="hist-stat"><div class="hist-stat-lbl">Units</div><div class="hist-stat-val">${(bill.units||0).toFixed(1)} kWh</div></div><div class="hist-stat"><div class="hist-stat-lbl">Electricity</div><div class="hist-stat-val">${fmtINR(bill.elecBill||0)}</div></div><div class="hist-stat"><div class="hist-stat-lbl">Rent</div><div class="hist-stat-val">${fmtINR(bill.rent||0)}</div></div>${(bill.prevPhoto||bill.photo)?'<div class="hist-stat"><div class="hist-stat-lbl">Photo</div><div style="font-size:12px">📷📷</div></div>':''}</div>`;
+    item.innerHTML=`<div class="hist-top"><div><div class="hist-month">${bill.month||'—'}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${bill.date||''}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="hist-total">${fmtINR(bill.total)}</div><div class="hist-actions"><button class="hist-btn" title="Share image" onclick="shareHistBill(window._hb[${bill.id}]);event.stopPropagation()">📤</button><button class="hist-btn" title="Print" onclick="printHistBill(window._hb[${bill.id}]);event.stopPropagation()">🖨️</button><button class="hist-btn del" title="Delete" onclick="deleteBill(${bill.id});event.stopPropagation()">🗑</button></div></div></div><div class="hist-bottom"><div class="hist-stat"><div class="hist-stat-lbl">Units</div><div class="hist-stat-val">${(bill.units||0).toFixed(1)} kWh</div></div><div class="hist-stat"><div class="hist-stat-lbl">Electricity</div><div class="hist-stat-val">${fmtINR(bill.elecBill||0)}</div></div><div class="hist-stat"><div class="hist-stat-lbl">Rent</div><div class="hist-stat-val">${fmtINR(bill.rent||0)}</div></div>${(bill.prevPhoto||bill.photo)?'<div class="hist-stat"><div class="hist-stat-lbl">Photo</div><div style="font-size:12px">📷📷</div></div>':''}</div>`;
     item.addEventListener('click',()=>showBillModal(bill));
     list.appendChild(item);
   });
@@ -1012,11 +1075,43 @@ function showBillModal(bill){
       <div style="padding:12px 16px;border-bottom:1px solid var(--border2);display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--muted)">House Rent</span><span style="font-family:var(--mono);font-size:13px">${fmtINR(bill.rent||0)}</span></div>
       <div style="padding:14px 16px;display:flex;justify-content:space-between;background:var(--amber-glow2)"><span style="font-weight:700">Total</span><span style="font-family:var(--mono);font-size:20px;color:var(--amber);font-weight:700">${fmtINR(bill.total)}</span></div>
     </div>
-    ${(hasPrev||hasCurr)?`<div style="display:grid;grid-template-columns:${hasPrev&&hasCurr?'1fr 1fr':'1fr'};gap:8px;margin-bottom:12px">${hasPrev?`<div><img src="${bill.prevPhoto}" style="width:100%;border-radius:8px;max-height:110px;object-fit:cover;border:1px solid var(--border)"/><div style="font-size:9px;color:var(--muted);text-align:center;padding:4px;text-transform:uppercase;letter-spacing:1px">Previous</div></div>`:''} ${hasCurr?`<div><img src="${bill.photo||bill.currPhoto}" style="width:100%;border-radius:8px;max-height:110px;object-fit:cover;border:1px solid var(--border)"/><div style="font-size:9px;color:var(--muted);text-align:center;padding:4px;text-transform:uppercase;letter-spacing:1px">Current</div></div>`:''}</div>`:''}
-    <button class="btn btn-primary" onclick="shareHistBill(window._hb[${bill.id}]);closeModal()"><span>📤</span> Share Bill Image</button>`;
+    ${(hasPrev||hasCurr)?`<div style="display:grid;grid-template-columns:${hasPrev&&hasCurr?'1fr 1fr':'1fr'};gap:8px;margin-bottom:12px">${hasPrev?`<div><img src="${bill.prevPhoto}" style="width:100%;border-radius:8px;max-height:110px;object-fit:contain;background:#0A0E18;border:1px solid var(--border)"/><div style="font-size:9px;color:var(--muted);text-align:center;padding:4px;text-transform:uppercase;letter-spacing:1px">Previous</div></div>`:''} ${hasCurr?`<div><img src="${bill.photo||bill.currPhoto}" style="width:100%;border-radius:8px;max-height:110px;object-fit:contain;background:#0A0E18;border:1px solid var(--border)"/><div style="font-size:9px;color:var(--muted);text-align:center;padding:4px;text-transform:uppercase;letter-spacing:1px">Current</div></div>`:''}</div>`:''}
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:0">
+      <button class="btn btn-secondary btn-sm" onclick="shareHistBill(window._hb[${bill.id}]);closeModal()"><span>📤</span> Share</button>
+      <button class="btn btn-secondary btn-sm" onclick="printHistBill(window._hb[${bill.id}]);closeModal()"><span>🖨️</span> Print</button>
+    </div>`;
   E('modal-overlay').classList.add('open');
 }
 function closeModal(e){if(!e||e.target===E('modal-overlay'))E('modal-overlay').classList.remove('open')}
+
+// Print a historical bill via the on-screen print card
+function printHistBill(bill){
+  if(!bill)return;
+  // Populate the print card with this bill's data
+  E('bp-prop').textContent=bill.property||cfg.property;
+  E('bp-tenant').textContent='Tenant: '+(bill.tenant||cfg.tenant);
+  E('bp-month').textContent=bill.month||'';
+  E('bp-date').textContent=bill.date||'';
+  E('bp-prev').textContent=(bill.prevReading||0).toFixed(1)+' kWh';
+  E('bp-curr').textContent=(bill.currReading||0).toFixed(1)+' kWh';
+  E('bp-units').textContent=(bill.units||0).toFixed(1)+' kWh';
+  E('bp-elec-detail').textContent=(bill.units||0).toFixed(1)+' units × ₹'+(bill.rate||0)+'/kWh';
+  E('bp-elec-val').textContent=fmtINR(bill.elecBill||0);
+  E('bp-rent-val').textContent=fmtINR(bill.rent||0);
+  E('bp-total-val').textContent=fmtINR(bill.total);
+  E('bp-total-month').textContent=bill.month||'';
+  E('bp-footer-date').textContent=bill.date||'';
+  // Photos
+  const hasPrev=!!bill.prevPhoto,hasCurr=!!(bill.photo||bill.currPhoto);
+  if(hasPrev){E('bp-prev-img').src=bill.prevPhoto}
+  if(hasCurr){E('bp-curr-img').src=bill.photo||bill.currPhoto}
+  tog('bp-photos-row',!(hasPrev||hasCurr));
+  // Switch to bill tab (which has the printable card) and print
+  switchTab('bill');
+  tog('bill-no-reading',true);
+  tog('bill-content',false);
+  setTimeout(()=>window.print(),300);
+}
 
 // ── Settings ───────────────────────────────────────────────────
 function populateSettings(){
@@ -1027,6 +1122,7 @@ function populateSettings(){
   const ys=E('s-year');ys.innerHTML='';
   for(let y=n.getFullYear()-1;y<=n.getFullYear()+2;y++){const o=document.createElement('option');o.value=o.textContent=y;ys.appendChild(o)}
   ys.value=cfg.billingYear||String(n.getFullYear());
+  E('theme-toggle').classList.toggle('on',cfg.billTheme==='light');
 }
 async function saveSettings(){
   cfg.property=E('s-property').value||'My Property';cfg.tenant=E('s-tenant').value||'Tenant';
